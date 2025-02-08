@@ -1,0 +1,12 @@
+{
+  "name": "Hello World",
+  "description": "A simple tool to demonstrate the basics of ATM tools",
+  "version": "1.0.0",
+  "author": "ATM Team",
+  "capabilities": [
+    {
+      "name": "Say Hello",
+      "description": "Returns a greeting message with optional name customization"
+    }
+  ]
+} 

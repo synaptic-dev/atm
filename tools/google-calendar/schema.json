@@ -1,0 +1,69 @@
+{
+  "type": "function",
+  "function": {
+    "name": "list_calendar_events",
+    "parameters": {
+      "type": "object",
+      "required": [
+        "calendar_id",
+        "toolcloud_metadata"
+      ],
+      "properties": {
+        "q": {
+          "type": "string",
+          "nullable": true,
+          "description": "A query string to search for specific events. For example, 'Meeting' to find events with 'Meeting' in their title."
+        },
+        "toolcloud_metadata": {
+          "type": "object",
+          "required": [
+            "provider",
+            "schema_id"
+          ],
+          "properties": {
+            "provider": {
+              "type": "string",
+              "enum": [
+                "google_calendar"
+              ],
+              "description": "The calendar service provider, fixed to 'google_calendar'."
+            },
+            "schema_id": {
+              "type": "integer",
+              "enum": [
+                1
+              ],
+              "description": "The schema ID for this function, fixed to 1."
+            }
+          },
+          "description": "Metadata for the tool cloud integration, including provider and schema ID."
+        },
+        "time_max": {
+          "type": "string",
+          "nullable": true,
+          "description": "The maximum time to filter events by. Events will be returned only if they end before this time, in RFC3339 format."
+        },
+        "time_min": {
+          "type": "string",
+          "nullable": true,
+          "description": "The minimum time to filter events by. Events will be returned only if they start after this time, in RFC3339 format (e.g., '2025-02-01T00:00:00Z')."
+        },
+        "time_zone": {
+          "type": "string",
+          "nullable": true,
+          "description": "The time zone in which to display the events. If not specified, the API will use the user's default time zone."
+        },
+        "calendar_id": {
+          "type": "string",
+          "description": "The ID of the calendar to retrieve events from."
+        },
+        "max_results": {
+          "type": "integer",
+          "nullable": true,
+          "description": "The maximum number of events to return. If not specified, the API will return up to 250 events."
+        }
+      }
+    },
+    "description": "List events from a specific Google Calendar using the Google Calendar API."
+  }
+} 

@@ -1,0 +1,23 @@
+{
+  "type": "function",
+  "function": {
+    "name": "say_hello",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Name of the person to greet",
+          "default": "World"
+        },
+        "language": {
+          "type": "string",
+          "enum": ["en", "es", "fr"],
+          "description": "Language for the greeting",
+          "default": "en"
+        }
+      }
+    },
+    "description": "Returns a greeting message in the specified language"
+  }
+} 
