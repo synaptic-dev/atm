@@ -8,166 +8,18 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion"
+import { getTool } from "@/lib/github"
 
-export default function ToolDetail({ params }: { params: { id: string } }) {
-  // For demo purposes - in real app, fetch tool data based on params.id
-  const tool = {
-    id: params.id,
-    name: "Gmail",
-    description: "Send emails programmatically through Gmail API with advanced templating and attachment support",
-    author: "Google",
-    version: "2.1.0",
-    capabilities: [
-      {
-        name: "Send Email",
-        description: "Send a new email to one or multiple recipients",
-        schema: {
-          input: {
-            type: "object",
-            required: ["to", "subject", "body"],
-            properties: {
-              to: {
-                type: "string",
-                description: "Recipient email address"
-              },
-              subject: {
-                type: "string",
-                description: "Email subject line"
-              },
-              body: {
-                type: "string",
-                description: "Email body content (supports HTML)"
-              }
-            }
-          }
-        },
-        runnerCode: `async function sendEmail(input: SendEmailInput) {
-  const gmail = google.gmail({ version: 'v1', auth });
-  
-  // Create email content
-  const message = {
-    to: input.to,
-    subject: input.subject,
-    html: input.body
-  };
+export default async function ToolDetail({
+  params,
+}: {
+  params: Promise<{ id: string }>
+}) {
+  const { id } = await params;
+  const tool = await getTool(id);
 
-  // Encode the email in base64
-  const encodedMessage = Buffer.from(
-    Object.entries(message)
-      .map(([key, value]) => \`\${key}: \${value}\`)
-      .join('\\n')
-  ).toString('base64');
-
-  // Send the email
-  const res = await gmail.users.messages.send({
-    userId: 'me',
-    requestBody: {
-      raw: encodedMessage
-    }
-  });
-
-  return res.data;
-}`
-      },
-      {
-        name: "Check Email",
-        description: "Check for new emails in your inbox",
-        schema: {
-          input: {
-            type: "object",
-            properties: {
-              maxResults: {
-                type: "number",
-                description: "Maximum number of emails to return",
-                default: 10
-              },
-              labelIds: {
-                type: "array",
-                items: { type: "string" },
-                description: "Only return messages with these labels"
-              }
-            }
-          }
-        },
-        runnerCode: `async function checkEmail(input: CheckEmailInput) {
-  const gmail = google.gmail({ version: 'v1', auth });
-
-  // List messages matching the criteria
-  const res = await gmail.users.messages.list({
-    userId: 'me',
-    maxResults: input.maxResults || 10,
-    labelIds: input.labelIds,
-    q: 'in:inbox'
-  });
-
-  // Get full message details for each email
-  const messages = await Promise.all(
-    res.data.messages.map(async (message) => {
-      const details = await gmail.users.messages.get({
-        userId: 'me',
-        id: message.id
-      });
-      return details.data;
-    })
-  );
-
-  return messages;
-}`
-      },
-      {
-        name: "Draft Email",
-        description: "Create a draft email without sending",
-        schema: {
-          input: {
-            type: "object",
-            required: ["to", "subject", "body"],
-            properties: {
-              to: {
-                type: "string",
-                description: "Recipient email address"
-              },
-              subject: {
-                type: "string",
-                description: "Email subject line"
-              },
-              body: {
-                type: "string",
-                description: "Email body content"
-              }
-            }
-          }
-        },
-        runnerCode: `async function createDraft(input: CreateDraftInput) {
-  const gmail = google.gmail({ version: 'v1', auth });
-
-  // Create draft content
-  const message = {
-    to: input.to,
-    subject: input.subject,
-    html: input.body
-  };
-
-  // Encode the email in base64
-  const encodedMessage = Buffer.from(
-    Object.entries(message)
-      .map(([key, value]) => \`\${key}: \${value}\`)
-      .join('\\n')
-  ).toString('base64');
-
-  // Create the draft
-  const res = await gmail.users.drafts.create({
-    userId: 'me',
-    requestBody: {
-      message: {
-        raw: encodedMessage
-      }
-    }
-  });
-
-  return res.data;
-}`
-      }
-    ]
+  if (!tool) {
+    return <div>Tool not found</div>;
   }
 
   return (

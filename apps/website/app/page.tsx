@@ -2,8 +2,11 @@ import { Input } from "@/components/ui/input"
 import { Search } from "lucide-react"
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import Link from "next/link"
+import { getTools } from "@/lib/github"
 
-export default function Home() {
+export default async function Home() {
+  const tools = await getTools();
+
   return (
     <div className="flex flex-col items-center justify-center p-8 pb-20 gap-12 sm:p-20">
       <main className="flex flex-col items-center gap-12 max-w-4xl text-center">
@@ -40,11 +43,13 @@ export default function Home() {
             Featured Tools
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {featuredTools.map((tool) => (
+            {tools.map((tool) => (
               <Link key={tool.id} href={`/tools/${tool.id}`} className="block group">
                 <Card className="hover:shadow-lg transition-shadow h-full">
                   <CardHeader>
-                    <CardTitle className="group-hover:text-primary transition-colors">{tool.name}</CardTitle>
+                    <CardTitle className="group-hover:text-primary transition-colors">
+                      {tool.name}
+                    </CardTitle>
                     <CardDescription>{tool.description}</CardDescription>
                   </CardHeader>
                 </Card>
@@ -59,18 +64,13 @@ export default function Home() {
 
 const featuredTools = [
   {
-    id: "gmail",
-    name: "Gmail",
-    description: "Send emails programmatically through Gmail API with advanced templating and attachment support"
+    id: "google-calendar",
+    name: "Google Calendar",
+    description: "Access and manage Google Calendar events and schedules programmatically"
   },
   {
-    id: "slack",
-    name: "Slack",
-    description: "Post messages, files, and interactive components to Slack channels and direct messages"
-  },
-  {
-    id: "github",
-    name: "GitHub",
-    description: "Create, update, and manage GitHub issues and pull requests across repositories"
+    id: "hello-world",
+    name: "Hello World",
+    description: "A simple tool to demonstrate the basics of ATM tools"
   }
 ]
