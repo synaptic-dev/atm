@@ -1,4 +1,5 @@
 export async function runner(input) {
+  console.log("42")
   const { accessToken, calendarId = "primary" } = input;
 
   if (!accessToken) {
