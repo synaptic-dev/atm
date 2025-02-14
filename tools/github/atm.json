@@ -1,0 +1,7 @@
+{
+  "name": "GitHub",
+  "handle": "github",
+  "description": "A tool for interacting with GitHub API",
+  "author": "SIER",
+  "version": "1.0.0"
+} 

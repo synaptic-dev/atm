@@ -1,0 +1,17 @@
+{
+  "name": "pokemon-catcher",
+  "version": "1.0.0",
+  "description": "A tool for catching random Pokemon using the PokeAPI",
+  "main": "index.ts",
+  "scripts": {
+    "build": "atm build",
+    "publish": "atm publish"
+  },
+  "dependencies": {
+    "@synaptic-ai/atm": "workspace:*",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  }
+} 

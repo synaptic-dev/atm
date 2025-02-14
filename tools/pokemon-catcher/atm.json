@@ -1,0 +1,7 @@
+{
+  "name": "Pokemon Catcher",
+  "handle": "pokemon-catcher",
+  "description": "A tool for catching random Pokemon using the PokeAPI",
+  "author": "SIER",
+  "version": "1.0.0"
+} 

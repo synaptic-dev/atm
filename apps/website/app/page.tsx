@@ -2,10 +2,16 @@ import { Input } from "@/components/ui/input"
 import { Search } from "lucide-react"
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import Link from "next/link"
-import { getTools } from "@/lib/github"
+import { getTools } from "@/lib/s3"
+
+// Make the page dynamic to ensure we get fresh data
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export default async function Home() {
+  console.log('Fetching tools for home page...');
   const tools = await getTools();
+  console.log('Tools fetched:', tools);
 
   return (
     <div className="flex flex-col items-center justify-center p-8 pb-20 gap-12 sm:p-20">
@@ -40,7 +46,7 @@ export default async function Home() {
         {/* Featured Section */}
         <div className="w-full space-y-6">
           <h2 className="text-2xl font-semibold text-left">
-            Featured Tools
+            Featured Tools ({tools.length})
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {tools.map((tool) => (

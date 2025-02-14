@@ -1,0 +1,17 @@
+{
+  "name": "calculator",
+  "version": "1.0.0",
+  "description": "A simple calculator tool with basic arithmetic operations",
+  "main": "index.ts",
+  "scripts": {
+    "build": "atm build",
+    "publish": "atm publish"
+  },
+  "dependencies": {
+    "@synaptic-ai/atm": "workspace:*",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  }
+} 

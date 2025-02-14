@@ -8,7 +8,8 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion"
-import { getTool } from "@/lib/github"
+import { getTool } from "@/lib/s3"
+import { DownloadCapability } from "@/components/download-capability"
 
 export default async function ToolDetail({
   params,
@@ -71,11 +72,20 @@ export default async function ToolDetail({
             {tool.capabilities.map((capability) => (
               <AccordionItem key={capability.name} value={capability.name} className="border rounded-lg px-6">
                 <AccordionTrigger className="hover:no-underline">
-                  <div className="flex flex-col items-start gap-1.5">
-                    <h3 className="font-semibold text-lg">{capability.name}</h3>
-                    <p className="text-sm text-muted-foreground font-normal">
-                      {capability.description}
-                    </p>
+                  <div className="flex flex-1 items-center justify-between pr-4">
+                    <div className="flex flex-col items-start gap-1.5">
+                      <div className="flex items-center gap-3">
+                        <h3 className="font-semibold text-lg">{capability.name}</h3>
+                        <DownloadCapability 
+                          name={capability.name}
+                          schema={capability.schema}
+                          runnerCode={capability.runnerCode}
+                        />
+                      </div>
+                      <p className="text-sm text-muted-foreground font-normal">
+                        {capability.description}
+                      </p>
+                    </div>
                   </div>
                 </AccordionTrigger>
                 <AccordionContent>
