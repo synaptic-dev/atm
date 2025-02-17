@@ -424,6 +424,19 @@ importers:
         specifier: ^5.0.0
         version: 5.7.3
 
+  tools/world-clock:
+    dependencies:
+      '@synaptic-ai/atm':
+        specifier: workspace:*
+        version: link:../../packages/toolmaker
+      zod:
+        specifier: ^3.22.4
+        version: 3.24.1
+    devDependencies:
+      typescript:
+        specifier: ^5.0.0
+        version: 5.7.3
+
 packages:
 
   /@alloc/quick-lru@5.2.0:
