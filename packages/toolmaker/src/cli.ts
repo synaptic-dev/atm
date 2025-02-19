@@ -14,6 +14,8 @@ import { promisify } from 'util';
 import { writeFile } from 'fs/promises';
 import { zodToJsonSchema } from 'zod-to-json-schema';
 import { z } from 'zod';
+import http from 'http';
+import os from 'os';
 
 const SUPABASE_URL='https://hnibcchiknipqongruty.supabase.co'
 const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhuaWJjY2hpa25pcHFvbmdydXR5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzE4NDA3MTksImV4cCI6MjA0NzQxNjcxOX0.ocOf570HeHOoc8ZgKyXeLAJEO90BJ-yQfnPtgBiINKs'
@@ -23,6 +25,9 @@ const s3Client = new S3Client({
   credentials: fromNodeProviderChain()
 });
 const BUCKET_NAME = 'atm-tools';
+const AUTH_PORT = 42420;
+const CONFIG_DIR = path.join(os.homedir(), '.atm');
+const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
 
 // Initialize Supabase client
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -339,12 +344,105 @@ command = ""
   }
 }
 
+async function login() {
+  const loginUrl = `http://localhost:3000/api/atm/login?next=${encodeURIComponent(`http://localhost:${AUTH_PORT}`)}`;
+  
+  console.log('\nTo login to ATM, please visit:');
+  console.log('\x1b[36m%s\x1b[0m', loginUrl); // Cyan color for URL
+  console.log('\nWaiting for authentication...');
+
+  const server = http.createServer(async (req, res) => {
+    const url = new URL(req.url!, `http://localhost:${AUTH_PORT}`);
+    const accessToken = url.searchParams.get('access_token');
+    const refreshToken = url.searchParams.get('refresh_token');
+
+    if (accessToken && refreshToken) {
+      // Create config directory if it doesn't exist
+      if (!fs.existsSync(CONFIG_DIR)) {
+        fs.mkdirSync(CONFIG_DIR, { recursive: true });
+      }
+
+      // Save tokens to config file
+      const config = {
+        access_token: accessToken,
+        refresh_token: refreshToken,
+        updated_at: new Date().toISOString()
+      };
+
+      fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2));
+
+      // Send success response
+      res.writeHead(200, { 'Content-Type': 'text/html' });
+      res.end(`
+        <html>
+          <body>
+            <h1>Authentication Successful!</h1>
+            <p>You can now close this window and return to the terminal.</p>
+            <script>window.close()</script>
+          </body>
+        </html>
+      `);
+
+      // Close server after successful authentication
+      server.close(() => {
+        console.log('\n✨ Authentication successful! You can now use ATM commands.');
+        process.exit(0);
+      });
+    } else {
+      res.writeHead(400, { 'Content-Type': 'text/html' });
+      res.end(`
+        <html>
+          <body>
+            <h1>Authentication Failed</h1>
+            <p>Missing required tokens. Please try again.</p>
+          </body>
+        </html>
+      `);
+    }
+  });
+
+  server.listen(AUTH_PORT, () => {
+    console.log(`Local server started on port ${AUTH_PORT}`);
+  });
+
+  // Handle server errors
+  server.on('error', (error: any) => {
+    if (error.code === 'EADDRINUSE') {
+      console.error(`Port ${AUTH_PORT} is already in use. Please try again later.`);
+    } else {
+      console.error('Server error:', error);
+    }
+    process.exit(1);
+  });
+}
+
+// Helper function to get stored tokens
+export function getStoredTokens(): { access_token?: string, refresh_token?: string } {
+  try {
+    if (fs.existsSync(CONFIG_FILE)) {
+      const config = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf-8'));
+      return {
+        access_token: config.access_token,
+        refresh_token: config.refresh_token
+      };
+    }
+  } catch (error) {
+    console.error('Error reading config file:', error);
+  }
+  return {};
+}
+
 const program = new Command();
 
 program
   .name('atm')
   .description('ATM (Agent Tool Manager) CLI')
   .version('1.0.0');
+
+program
+  .command('login')
+  .description('Login to ATM')
+  .action(login);
 
 program
   .command('build')
