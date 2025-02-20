@@ -8,8 +8,8 @@ import { createClient } from '@supabase/supabase-js';
 import http from 'http';
 import os from 'os';
 import { buildTool } from './commands/build';
-import { publishTool } from './publish';
-import { login } from './login';
+import { publishTool } from './commands/publish';
+import { login } from './commands/login';
 
 const SUPABASE_URL='https://hnibcchiknipqongruty.supabase.co'
 const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhuaWJjY2hpa25pcHFvbmdydXR5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzE4NDA3MTksImV4cCI6MjA0NzQxNjcxOX0.ocOf570HeHOoc8ZgKyXeLAJEO90BJ-yQfnPtgBiINKs'
