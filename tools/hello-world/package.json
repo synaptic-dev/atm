@@ -1,7 +1,7 @@
 {
-  "name": "github",
+  "name": "hello-world-tool",
   "version": "1.0.0",
-  "description": "A tool for interacting with GitHub API",
+  "description": "A simple tool to greet people",
   "main": "index.ts",
   "scripts": {
     "build": "atm build",
@@ -9,10 +9,11 @@
   },
   "dependencies": {
     "@synaptic-ai/toolmaker": "workspace:*",
-    "zod": "^3.22.4"
+    "zod": "^3.24.1"
   },
   "devDependencies": {
-    "@types/node": "^20.0.0",
-    "typescript": "^5.0.0"
-  }
-} 
+    "typescript": "^5.2.2"
+  },
+  "author": "Synaptic",
+  "license": "MIT"
+}

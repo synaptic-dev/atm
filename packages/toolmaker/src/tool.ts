@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { zodToJsonSchema } from 'zod-to-json-schema';
 
 type JsonSchema = {
   type: 'function';
@@ -13,9 +14,7 @@ type JsonSchema = {
   };
 };
 
-type ZodSchema = z.ZodType<any>;
-
-type Schema = JsonSchema | ZodSchema;
+type Schema = JsonSchema | z.ZodType;
 
 // Helper type to extract parameter types from schema
 type InferParams<T extends Schema> = T extends JsonSchema 
@@ -30,36 +29,78 @@ type InferParams<T extends Schema> = T extends JsonSchema
           : any;
       }
     : Record<string, any>
-  : T extends ZodSchema
+  : T extends z.ZodType
     ? z.infer<T>
     : never;
 
-interface Capability<T extends Schema = Schema> {
+export interface ToolCapabilityOptions<T extends z.ZodType> {
   name: string;
-  schema: T;
   description: string;
-  runner: (input: InferParams<T>) => Promise<any>;
+  schema: T;
+  runner: (params: z.infer<T>) => Promise<any>;
 }
 
-interface ToolData {
-  capabilities: Capability<Schema>[];
-}
-
-class Tool {
-  private capabilities: Capability<Schema>[];
-
-  constructor(capabilities: Capability<Schema>[] = []) {
-    this.capabilities = capabilities;
+export class ToolCapability<T extends z.ZodType> {
+  constructor(options: ToolCapabilityOptions<T>) {
+    this.name = options.name;
+    this.description = options.description;
+    this.schema = options.schema;
+    this.runner = options.runner;
   }
 
-  addCapability<T extends Schema>(capability: Capability<T>): Tool {
-    this.capabilities.push(capability as Capability<Schema>);
+  public name: string;
+  public description: string;
+  public schema: T;
+  public runner: (params: z.infer<T>) => Promise<any>;
+
+  toJSON() {
+    return {
+      name: this.name,
+      description: this.description,
+      schema: zodToJsonSchema(this.schema),
+      runner: this.runner.toString()
+    };
+  }
+
+  static fromJSON(json: any): ToolCapability<any> {
+    return new ToolCapability({
+      name: json.name,
+      description: json.description,
+      schema: json.schema,
+      runner: new Function('return ' + json.runner)()
+    });
+  }
+}
+
+export interface ToolOptions {
+  name: string;
+  description: string;
+}
+
+export class Tool {
+  private capabilities: ToolCapability<any>[] = [];
+  private name: string;
+  private description: string;
+
+  constructor(options: ToolOptions) {
+    this.name = options.name;
+    this.description = options.description;
+  }
+
+  addCapability<T extends z.ZodType>(capability: ToolCapability<T>): Tool {
+    this.capabilities.push(capability);
     return this;
   }
 
-  toJSON(): ToolData {
+  getCapabilities(): ToolCapability<any>[] {
+    return this.capabilities;
+  }
+
+  toJSON() {
     return {
-      capabilities: this.capabilities
+      name: this.name,
+      description: this.description,
+      capabilities: this.capabilities.map(cap => cap.toJSON())
     };
   }
 }

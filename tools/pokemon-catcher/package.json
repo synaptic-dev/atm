@@ -8,7 +8,7 @@
     "publish": "atm publish"
   },
   "dependencies": {
-    "@synaptic-ai/atm": "workspace:*",
+    "@synaptic-ai/toolmaker": "workspace:*",
     "zod": "^3.22.4"
   },
   "devDependencies": {

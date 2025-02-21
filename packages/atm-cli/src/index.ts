@@ -2,24 +2,17 @@
 import { Command } from 'commander';
 import path from 'path';
 import fs from 'fs';
-import { S3Client } from '@aws-sdk/client-s3';
-import { fromNodeProviderChain } from '@aws-sdk/credential-providers';
 import { createClient } from '@supabase/supabase-js';
-import http from 'http';
 import os from 'os';
 import { buildTool } from './commands/build';
 import { publishTool } from './commands/publish';
 import { login } from './commands/login';
+import { initTool } from './commands/init';
+import { version } from './commands/version';
 
 const SUPABASE_URL='https://hnibcchiknipqongruty.supabase.co'
 const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhuaWJjY2hpa25pcHFvbmdydXR5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzE4NDA3MTksImV4cCI6MjA0NzQxNjcxOX0.ocOf570HeHOoc8ZgKyXeLAJEO90BJ-yQfnPtgBiINKs'
 
-const s3Client = new S3Client({ 
-  region: 'us-west-2',
-  credentials: fromNodeProviderChain()
-});
-const BUCKET_NAME = 'atm-tools';
-const AUTH_PORT = 42420;
 const CONFIG_DIR = path.join(os.homedir(), '.atm');
 const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
 
@@ -54,7 +47,13 @@ const program = new Command();
 program
   .name('atm')
   .description('ATM (Agent Tool Manager) CLI')
-  .version('1.0.0');
+  .version(require('../package.json').version);
+
+program
+  .command('init')
+  .description('Initialize a new ATM tool from template')
+  .argument('[folder]', 'Folder name to create the tool in')
+  .action(initTool);
 
 program
   .command('login')
@@ -69,8 +68,13 @@ program
 
 program
   .command('publish')
-  .description('Publish tool to S3')
+  .description('Publish tool to ATM registry')
   .argument('[path]', 'Path to tool directory', '.')
   .action(publishTool);
 
-program.parse();
+program
+  .command('version')
+  .description('Show ATM CLI version')
+  .action(version);
+
+program.parse(); 

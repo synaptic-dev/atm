@@ -1,1 +1,1 @@
-export { default as Tool } from './tool';
+export { ToolCapability, Tool } from './tool';

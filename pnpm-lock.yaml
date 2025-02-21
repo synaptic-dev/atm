@@ -245,6 +245,43 @@ importers:
         specifier: ^5
         version: 5.7.3
 
+  packages/atm-cli:
+    dependencies:
+      '@supabase/supabase-js':
+        specifier: ^2.39.7
+        version: 2.48.1
+      '@synaptic-ai/toolmaker':
+        specifier: workspace:*
+        version: link:../toolmaker
+      commander:
+        specifier: ^11.1.0
+        version: 11.1.0
+      esbuild:
+        specifier: ^0.20.0
+        version: 0.20.2
+      ts-node:
+        specifier: ^10.9.2
+        version: 10.9.2(@types/node@20.17.17)(typescript@5.7.3)
+      zod:
+        specifier: ^3.24.1
+        version: 3.24.1
+      zod-to-json-schema:
+        specifier: 3.24.2
+        version: 3.24.2(zod@3.24.1)
+    devDependencies:
+      '@tsconfig/node-lts':
+        specifier: ^22.0.1
+        version: 22.0.1
+      '@types/node':
+        specifier: ^20.11.17
+        version: 20.17.17
+      tsup:
+        specifier: ^8.3.5
+        version: 8.3.6(typescript@5.7.3)
+      typescript:
+        specifier: ^5.0.0
+        version: 5.7.3
+
   packages/eslint-config:
     devDependencies:
       '@eslint/js':
@@ -365,7 +402,7 @@ importers:
 
   tools/answer-machine:
     dependencies:
-      '@synaptic-ai/atm':
+      '@synaptic-ai/toolmaker':
         specifier: workspace:*
         version: link:../../packages/toolmaker
     devDependencies:
@@ -384,7 +421,7 @@ importers:
 
   tools/calculator:
     dependencies:
-      '@synaptic-ai/atm':
+      '@synaptic-ai/toolmaker':
         specifier: workspace:*
         version: link:../../packages/toolmaker
       zod:
@@ -397,7 +434,7 @@ importers:
 
   tools/github:
     dependencies:
-      '@synaptic-ai/atm':
+      '@synaptic-ai/toolmaker':
         specifier: workspace:*
         version: link:../../packages/toolmaker
       zod:
@@ -411,9 +448,22 @@ importers:
         specifier: ^5.0.0
         version: 5.7.3
 
+  tools/hello-world:
+    dependencies:
+      '@synaptic-ai/toolmaker':
+        specifier: workspace:*
+        version: link:../../packages/toolmaker
+      zod:
+        specifier: ^3.24.1
+        version: 3.24.1
+    devDependencies:
+      typescript:
+        specifier: ^5.2.2
+        version: 5.7.3
+
   tools/pokemon-catcher:
     dependencies:
-      '@synaptic-ai/atm':
+      '@synaptic-ai/toolmaker':
         specifier: workspace:*
         version: link:../../packages/toolmaker
       zod:
@@ -426,7 +476,7 @@ importers:
 
   tools/world-clock:
     dependencies:
-      '@synaptic-ai/atm':
+      '@synaptic-ai/toolmaker':
         specifier: workspace:*
         version: link:../../packages/toolmaker
       zod:
@@ -9550,6 +9600,14 @@ packages:
 
   /zod-to-json-schema@3.24.1(zod@3.24.1):
     resolution: {integrity: sha512-3h08nf3Vw3Wl3PK+q3ow/lIil81IT2Oa7YpQyUUDsEWbXveMesdfK1xBd2RhCkynwZndAxixji/7SYJJowr62w==}
+    peerDependencies:
+      zod: ^3.24.1
+    dependencies:
+      zod: 3.24.1
+    dev: false
+
+  /zod-to-json-schema@3.24.2(zod@3.24.1):
+    resolution: {integrity: sha512-pNUqrcSxuuB3/+jBbU8qKUbTbDqYUaG1vf5cXFjbhGgoUuA1amO/y4Q8lzfOhHU8HNPK6VFJ18lBDKj3OHyDsg==}
     peerDependencies:
       zod: ^3.24.1
     dependencies:

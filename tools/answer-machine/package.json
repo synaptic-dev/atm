@@ -9,7 +9,7 @@
     "build": "atm build"
   },
   "dependencies": {
-    "@synaptic-ai/atm": "workspace:*"
+    "@synaptic-ai/toolmaker": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^20.11.17",

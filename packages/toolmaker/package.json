@@ -1,21 +1,20 @@
 {
-  "name": "@synaptic-ai/atm",
-  "version": "1.0.0",
+  "name": "@synaptic-ai/toolmaker",
+  "version": "0.0.2",
   "description": "Agent Tool Manager - Create and manage AI tools",
   "scripts": {
     "build": "tsup src/index.ts src/cli/index.ts --format cjs,esm --dts",
-    "postbuild": "chmod +x bin/atm",
+    "postbuild": "chmod +x dist/cli/index.js && ln -sf ../dist/cli/index.js bin/atm",
     "prepublishOnly": "pnpm build"
   },
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
   "bin": {
-    "atm": "bin/atm"
+    "atm": "./dist/cli/index.js"
   },
   "files": [
-    "dist",
-    "bin"
+    "dist"
   ],
   "publishConfig": {
     "access": "public"
