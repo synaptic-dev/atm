@@ -3,7 +3,7 @@ import path from 'path';
 import { execSync } from 'child_process';
 
 const TEMPLATE_REPO = 'synaptic-dev/atm';
-const TEMPLATE_PATH = 'packages/templates/hello-world';
+const TEMPLATE_PATH = 'tools/hello-world';
 const DEFAULT_TOOL_NAME = 'hello-world';
 
 export async function initTool(folderName?: string) {
