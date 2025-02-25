@@ -52,24 +52,6 @@ export class ToolCapability<T extends z.ZodType> {
   public description: string;
   public schema: T;
   public runner: (params: z.infer<T>) => Promise<any>;
-
-  toJSON() {
-    return {
-      name: this.name,
-      description: this.description,
-      schema: zodToJsonSchema(this.schema),
-      runner: this.runner.toString()
-    };
-  }
-
-  static fromJSON(json: any): ToolCapability<any> {
-    return new ToolCapability({
-      name: json.name,
-      description: json.description,
-      schema: json.schema,
-      runner: new Function('return ' + json.runner)()
-    });
-  }
 }
 
 export interface ToolOptions {
@@ -96,12 +78,12 @@ export class Tool {
     return this.capabilities;
   }
 
-  toJSON() {
-    return {
-      name: this.name,
-      description: this.description,
-      capabilities: this.capabilities.map(cap => cap.toJSON())
-    };
+  getName(): string {
+    return this.name;
+  }
+
+  getDescription(): string {
+    return this.description;
   }
 }
 

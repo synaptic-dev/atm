@@ -59,8 +59,8 @@ export async function buildTool(entryFile: string = 'index.ts') {
       throw new Error('Entry file must export a Tool instance as default export');
     }
 
-    const toolJson = tool.toJSON();
-    const { name, description } = toolJson;
+    const name = tool.getName();
+    const description = tool.getDescription();
     const handle = toKebabCase(name);
 
     // Process each capability
@@ -79,11 +79,20 @@ export async function buildTool(entryFile: string = 'index.ts') {
       const schemaPath = path.join(capabilityDir, 'schema.ts');
       console.log('Saving schema to:', schemaPath);
       
-      // Copy the schema source code directly
-      fs.copyFileSync(
-        path.join(process.cwd(), 'capabilities', key, 'schema.ts'),
-        schemaPath
-      );
+      const schemaCode = `import { z } from 'zod';
+
+const schema = z.object({
+  ${Object.entries(schema._def.shape()).map(([key, value]: [string, any]) => {
+    const description = value._def.description;
+    const type = value._def.typeName.toLowerCase().replace('zod', '');
+    return `${key}: z.${type}()${description ? `.describe(${JSON.stringify(description)})` : ''}`;
+  }).join(',\n  ')}
+})${schema._def.description ? `.describe(${JSON.stringify(schema._def.description)})` : ''};
+
+export default schema;`;
+
+      const formattedSchemaCode = await prettier.format(schemaCode, { parser: 'typescript' });
+      fs.writeFileSync(schemaPath, formattedSchemaCode);
 
       // Save runner code
       const runnerPath = path.join(capabilityDir, 'runner.ts');

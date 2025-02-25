@@ -2,6 +2,8 @@ import path from 'path';
 import os from 'os';
 import fs from 'fs';
 import { createClient } from '@supabase/supabase-js';
+import tar from 'tar';
+import { CONFIG_DIR, CONFIG_FILE } from '../config';
 
 const SUPABASE_URL='https://hnibcchiknipqongruty.supabase.co'
 const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhuaWJjY2hpa25pcHFvbmdydXR5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzE4NDA3MTksImV4cCI6MjA0NzQxNjcxOX0.ocOf570HeHOoc8ZgKyXeLAJEO90BJ-yQfnPtgBiINKs'
@@ -20,175 +22,149 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
   }
 });
 
-const CONFIG_DIR = path.join(os.homedir(), '.atm');
-const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
-
-async function uploadCapabilityCode(userId: string, handle: string, capabilityName: string, code: string) {
-  const filePath = `${userId}/${handle}/${capabilityName}/runner.ts`;
-  const { error } = await supabase.storage
-    .from('atm_tools')
-    .upload(filePath, Buffer.from(code), {
-      contentType: 'text/typescript',
-      upsert: true
-    });
-
-  if (error) {
-    throw new Error(`Failed to upload runner code for ${capabilityName}: ${error.message}`);
-  }
-
-  const { data: { publicUrl } } = supabase.storage
-    .from('atm_tools')
-    .getPublicUrl(filePath);
-
-  return publicUrl;
-}
-
-export async function publishTool(toolPath: string) {
+export async function publishTool(toolPath: string = '.') {
   try {
-    // Read metadata from atm-tool/metadata.json
-    const metadataPath = path.join(process.cwd(), 'atm-tool', 'metadata.json');
+    // Check if dist directory exists
+    const distPath = path.join(process.cwd(), 'dist');
+    if (!fs.existsSync(distPath)) {
+      throw new Error('No dist directory found. Please run `atm build` first.');
+    }
+
+    // Read metadata.json
+    const metadataPath = path.join(distPath, 'metadata.json');
     if (!fs.existsSync(metadataPath)) {
-      console.error('No metadata.json found in atm-tool folder');
-      process.exit(1);
+      throw new Error('No metadata.json found in dist directory');
     }
 
     const metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf-8'));
-    const { handle, name, description, capabilities = [] } = metadata;
-
-    if (!handle) {
-      console.error('No handle found in metadata.json');
-      process.exit(1);
-    }
+    const { handle } = metadata;
 
     // Load JWT from config file
     if (!fs.existsSync(CONFIG_FILE)) {
-      console.error('Please login first using: atm login');
-      process.exit(1);
+      throw new Error('Please login first using: atm login');
     }
 
     const config = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf-8'));
-    const jwt = config.access_token;
     const userId = config.user_id;
 
-    if (!jwt || !userId) {
-      console.error('No access token found. Please login first using: atm login');
-      process.exit(1);
+    if (!userId) {
+      throw new Error('No user ID found. Please login first using: atm login');
     }
 
-    // Check if tool already exists in atm_tools table
-    const { data: existingTool, error: toolError } = await supabase
+    // Check if tool exists and belongs to the user
+    const { data: existingTool, error: toolCheckError } = await supabase
       .from('atm_tools')
       .select('*')
       .eq('handle', handle)
-      .eq('owner_id', userId)
       .single();
 
-    if (toolError && toolError.code !== 'PGRST116') { // PGRST116 is "not found" error
-      console.error('Error checking existing tool:', toolError.message);
-      process.exit(1);
+    if (toolCheckError && toolCheckError.code !== 'PGRST116') { // PGRST116 is "not found" error
+      throw new Error(`Failed to check existing tool: ${toolCheckError.message}`);
     }
 
-    let toolId;
-    if (!existingTool) {
-      // Save new tool to atm_tools table
-      const { data: newTool, error: insertError } = await supabase
-        .from('atm_tools')
-        .insert({
-          name,
-          handle,
-          description,
-          owner_id: userId
-        })
-        .select('id')
-        .single();
-
-      if (insertError) {
-        console.error('Failed to save tool:', insertError.message);
-        process.exit(1);
-      }
-
-      toolId = newTool.id;
-      console.log('Tool registered successfully in atm_tools');
-    } else {
-      toolId = existingTool.id;
-      console.log('Tool already registered in atm_tools');
+    if (existingTool && existingTool.owner_id !== userId) {
+      throw new Error('You do not have permission to update this tool');
     }
 
-    // Read capabilities from the atm-tool folder
-    const atmToolPath = path.join(process.cwd(), 'atm-tool');
-    const capabilitiesPath = path.join(atmToolPath, 'capabilities');
-    if (!fs.existsSync(capabilitiesPath)) {
-      console.error('No capabilities found in atm-tool folder');
-      process.exit(1);
+    // Create a temporary directory for the archive
+    const tmpDir = path.join(os.tmpdir(), 'atm-publish');
+    if (!fs.existsSync(tmpDir)) {
+      fs.mkdirSync(tmpDir);
     }
 
-    // Process each capability
-    for (const capability of capabilities) {
-      const capDir = capability.name.toLowerCase().replace(/\s+/g, '-');
-      const capabilityPath = path.join(capabilitiesPath, capDir);
-      const schemaPath = path.join(capabilityPath, 'schema.json');
-      const runnerPath = path.join(capabilityPath, 'runner.ts');
-      
-      if (!fs.existsSync(schemaPath)) {
-        console.error(`Schema not found for capability: ${capability.name}`);
-        continue;
-      }
+    // Create the archive path
+    const archivePath = path.join(tmpDir, `${handle}.tar.gz`);
 
-      if (!fs.existsSync(runnerPath)) {
-        console.error(`Runner code not found for capability: ${capability.name}`);
-        continue;
-      }
+    // Create a gzipped tar archive of the dist directory
+    console.log('Creating archive...');
+    await tar.create(
+      {
+        gzip: true,
+        file: archivePath,
+        cwd: process.cwd(),
+      },
+      ['dist']
+    );
 
-      const schema = JSON.parse(fs.readFileSync(schemaPath, 'utf-8'));
-      const runnerCode = fs.readFileSync(runnerPath, 'utf-8');
+    // Upload the archive to Supabase Storage
+    console.log('Uploading archive...');
+    const filePath = `${userId}/${handle}.tar.gz`;
+    const fileBuffer = fs.readFileSync(archivePath);
 
-      // Upload runner code to Supabase Storage
-      console.log(`Uploading runner code for ${capability.name}...`);
-      const runnerUrl = await uploadCapabilityCode(userId, handle, capDir, runnerCode);
-      console.log(`Runner code uploaded: ${runnerUrl}`);
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from('atm_tools')
+      .upload(filePath, fileBuffer, {
+        contentType: 'application/gzip',
+        upsert: true
+      });
 
+    if (uploadError) {
+      throw new Error(`Failed to upload archive: ${uploadError.message}`);
+    }
+
+    if (!uploadData) {
+      throw new Error('Failed to get storage file ID after upload');
+    }
+
+    // Clean up temporary files
+    fs.unlinkSync(archivePath);
+    fs.rmdirSync(tmpDir);
+
+    // Save or update tool metadata to database
+    const { data: tool, error: toolError } = await supabase
+      .from('atm_tools')
+      .upsert({
+        handle,
+        name: metadata.name,
+        description: metadata.description,
+        owner_id: userId,
+        file_path: uploadData.path
+      }, {
+        onConflict: 'handle'
+      })
+      .select()
+      .single();
+
+    if (toolError) {
+      throw new Error(`Failed to save tool metadata: ${toolError.message}`);
+    }
+
+    if (!tool) {
+      throw new Error('Failed to get tool ID after saving metadata');
+    }
+    console.log('Tool ID:', tool.id);
+    // Delete existing capabilities for this tool
+    const { error: deleteError } = await supabase
+      .from('atm_tool_capabilities')
+      .delete()
+      .eq('tool_id', tool.id);
+
+    if (deleteError) {
+      throw new Error(`Failed to delete existing capabilities: ${deleteError.message}`);
+    }
+
+    // Save capabilities metadata to database
+    for (const capability of metadata.capabilities) {
       const { error: capabilityError } = await supabase
         .from('atm_tool_capabilities')
         .upsert({
-          tool_id: toolId,
+          tool_id: tool.id,
           name: capability.name,
-          schema,
-          runner_url: runnerUrl,
-          description: capability.description
-        }, { onConflict: 'tool_id, name' });
-
-      if (capabilityError) {
-        console.error(`Failed to save capability ${capability.name}:`, capabilityError.message);
-        continue;
-      }
-
-      console.log(`Capability ${capability.name} published successfully`);
-    }
-
-    // Upload the built tool code
-    const builtToolPath = path.join(atmToolPath, 'index.js');
-    if (fs.existsSync(builtToolPath)) {
-      const toolCode = fs.readFileSync(builtToolPath);
-      const toolFilePath = `${userId}/${handle}/index.js`;
-      
-      console.log('Uploading built tool code...');
-      const { error: uploadError } = await supabase.storage
-        .from('atm_tools')
-        .upload(toolFilePath, toolCode, {
-          contentType: 'application/javascript',
-          upsert: true
+          description: capability.description,
+          key: capability.key
+        }, {
+          onConflict: 'tool_id,key'
         });
 
-      if (uploadError) {
-        console.error('Failed to upload built tool code:', uploadError.message);
-      } else {
-        console.log('Built tool code uploaded successfully');
+      if (capabilityError) {
+        throw new Error(`Failed to save capability metadata: ${capabilityError.message}`);
       }
     }
 
     console.log(`Tool ${handle} published successfully!`);
-  } catch (error) {
-    console.error('Error publishing tool:', error);
+    console.log('Metadata:', metadata);
+  } catch (error: any) {
+    console.error('Error publishing tool:', error?.message || error);
     process.exit(1);
   }
 }
