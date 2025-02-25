@@ -4,8 +4,31 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CodeBlock } from '@/components/CodeBlock';
 
-const SUPABASE_URL='https://hnibcchiknipqongruty.supabase.co';
-const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhuaWJjY2hpa25pcHFvbmdydXR5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzE4NDA3MTksImV4cCI6MjA0NzQxNjcxOX0.ocOf570HeHOoc8ZgKyXeLAJEO90BJ-yQfnPtgBiINKs';
+const SUPABASE_URL = 'https://hnibcchiknipqongruty.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhuaWJjY2hpa25pcHFvbmdydXR5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzE4NDA3MTksImV4cCI6MjA0NzQxNjcxOX0.ocOf570HeHOoc8ZgKyXeLAJEO90BJ-yQfnPtgBiINKs';
+
+interface Database {
+  public: {
+    Tables: {
+      atm_tools: {
+        Row: Tool;
+      };
+      atm_tool_capabilities: {
+        Row: Capability;
+      };
+    };
+    Buckets: {
+      atm_tools: {
+        Row: {
+          name: string;
+          owner: string;
+          file: string;
+          updated_at: string;
+        };
+      };
+    };
+  };
+}
 
 interface Tool {
   id: string;
@@ -31,7 +54,7 @@ interface CapabilityFiles {
   runner: string;
 }
 
-async function getCapabilityFiles(supabase: SupabaseClient, filePath: string, key: string): Promise<CapabilityFiles> {
+async function getCapabilityFiles(supabase: SupabaseClient<Database>, filePath: string, key: string): Promise<CapabilityFiles> {
   try {
     // Construct paths for schema and runner files
     const schemaPath = `${filePath}/capabilities/${key}/schema.ts`;
@@ -76,16 +99,16 @@ async function getCapabilityFiles(supabase: SupabaseClient, filePath: string, ke
   }
 }
 
-interface PageParams {
-  params: {
+interface PageProps {
+  params: Promise<{
     owner: string;
     handle: string;
-  };
+  }>;
 }
 
-export default async function ToolPage({ params }: PageParams) {
-  const { owner, handle } = params;
-  const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+export default async function ToolPage({ params }: PageProps) {
+  const { owner, handle } = await params;
+  const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_KEY);
   
   console.log('owner', owner);
   console.log('handle', handle);
