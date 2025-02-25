@@ -1,171 +1,131 @@
-import { S3Client, GetObjectCommand, ListObjectsV2Command, _Object } from '@aws-sdk/client-s3';
-import { fromIni } from '@aws-sdk/credential-providers';
-import JSZip from 'jszip';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-const BUCKET_NAME = 'atm-tools';
+const SUPABASE_URL='https://hnibcchiknipqongruty.supabase.co'
+const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhuaWJjY2hpa25pcHFvbmdydXR5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzE4NDA3MTksImV4cCI6MjA0NzQxNjcxOX0.ocOf570HeHOoc8ZgKyXeLAJEO90BJ-yQfnPtgBiINKs'
 
-console.log('Initializing S3 client with credentials from ~/.aws/credentials');
-const s3Client = new S3Client({ 
-  region: 'us-west-2',
-  credentials: fromIni()
-});
-
-// Test the credentials
-(async () => {
-  try {
-    console.log('Testing S3 credentials...');
-    const response = await s3Client.send(new ListObjectsV2Command({
-      Bucket: BUCKET_NAME,
-      MaxKeys: 1
-    }));
-    console.log('S3 credentials test successful:', response);
-  } catch (error) {
-    console.error('S3 credentials test failed:', error);
-  }
-})();
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 export interface Tool {
   id: string;
   handle: string;
   name: string;
   description: string;
-  version: string;
-  author: string;
-  capabilities: Array<{
-    name: string;
-    description: string;
-    schema?: any;
-    runnerCode?: string;
-  }>;
+  owner_id: string;
+  file_path: string;
+  capabilities: Array<Capability>;
+}
+
+export interface Capability {
+  id: string;
+  name: string;
+  description: string;
+  key: string;
+  schema: string;
 }
 
 export async function getTools(): Promise<Tool[]> {
   try {
-    console.log('Listing tools from bucket:', BUCKET_NAME);
+    console.log('Fetching tools from Supabase...');
     
-    // List all tool directories in the bucket
-    const response = await s3Client.send(new ListObjectsV2Command({
-      Bucket: BUCKET_NAME,
-      Delimiter: '/'
-    }));
+    // Fetch all tools
+    const { data: tools, error: toolsError } = await supabase
+      .from('atm_tools')
+      .select('*');
 
-    console.log('S3 ListObjects response:', JSON.stringify(response, null, 2));
-
-    if (!response.CommonPrefixes?.length) {
-      console.log('No directories found in bucket');
+    if (toolsError) {
+      console.error('Error fetching tools:', toolsError);
       return [];
     }
 
-    // Get tool names from directory prefixes
-    const toolNames = response.CommonPrefixes.map(prefix => {
-      const name = prefix.Prefix?.replace('/', '');
-      console.log('Processing directory:', name);
-      return name;
-    }).filter(Boolean);
+    if (!tools?.length) {
+      console.log('No tools found');
+      return [];
+    }
 
-    console.log('Found tool names:', toolNames);
+    console.log('Found tools:', tools);
 
-    // Fetch metadata.json for each tool
-    const tools = await Promise.all(
-      toolNames.map(async (toolName) => {
+    // Fetch capabilities for each tool
+    const toolsWithCapabilities = await Promise.all(
+      tools.map(async (tool: Tool) => {
         try {
-          console.log(`Fetching metadata for tool: ${toolName}`);
-          const { Body } = await s3Client.send(new GetObjectCommand({
-            Bucket: BUCKET_NAME,
-            Key: `${toolName}/metadata.json`
-          }));
+          const { data: capabilities, error: capsError } = await supabase
+            .from('atm_tool_capabilities')
+            .select('*')
+            .eq('tool_id', tool.id);
 
-          const content = await Body?.transformToString();
-          if (!content) {
-            console.log(`No content found for ${toolName}/metadata.json`);
-            return null;
+          if (capsError) {
+            console.error(`Error fetching capabilities for tool ${tool.handle}:`, capsError);
+            return {
+              ...tool,
+              capabilities: []
+            };
           }
 
-          console.log(`Metadata content for ${toolName}:`, content);
-          const parsedMetadata = JSON.parse(content);
           return {
-            id: toolName,
-            ...parsedMetadata
+            ...tool,
+            capabilities: capabilities || []
           };
         } catch (error) {
-          console.error(`Error fetching metadata for ${toolName}:`, error);
-          return null;
+          console.error(`Error processing tool ${tool.handle}:`, error);
+          return {
+            ...tool,
+            capabilities: []
+          };
         }
       })
     );
 
-    const validTools = tools.filter(Boolean) as Tool[];
-    console.log('Final tools list:', validTools);
-    return validTools;
+    console.log('Final tools list:', toolsWithCapabilities);
+    return toolsWithCapabilities;
   } catch (error) {
     console.error('Error fetching tools:', error);
     return [];
   }
 }
 
-export async function getTool(id: string): Promise<Tool | null> {
+export async function getTool(owner: string, handle: string): Promise<Tool | null> {
   try {
-    // Fetch and unzip the tool package
-    const { Body: zipBody } = await s3Client.send(new GetObjectCommand({
-      Bucket: BUCKET_NAME,
-      Key: `${id}.zip`
-    }));
+    // Fetch tool metadata
+    const { data: tool, error: toolError } = await supabase
+      .from('atm_tools')
+      .select('*')
+      .eq('owner_id', owner)
+      .eq('handle', handle)
+      .single();
 
-    if (!zipBody) return null;
+    if (toolError) {
+      console.error('Error fetching tool:', toolError);
+      return null;
+    }
 
-    // Convert ReadableStream to ArrayBuffer
-    const zipBuffer = await new Response(zipBody as ReadableStream).arrayBuffer();
-    const zip = await JSZip.loadAsync(zipBuffer);
+    if (!tool) {
+      console.log('Tool not found');
+      return null;
+    }
 
-    // Read metadata.json from zip
-    const metadataFile = zip.file('metadata.json');
-    if (!metadataFile) return null;
+    // Fetch tool capabilities
+    const { data: capabilities, error: capsError } = await supabase
+      .from('atm_tool_capabilities')
+      .select('*')
+      .eq('tool_id', tool.id);
 
-    const metadataContent = await metadataFile.async('string');
-    const metadata = JSON.parse(metadataContent);
+    if (capsError) {
+      console.error('Error fetching capabilities:', capsError);
+      return null;
+    }
 
-    // Get capabilities from the zip
-    const capabilityDirs = new Set<string>();
-    const files = Object.keys(zip.files);
-    files.forEach(file => {
-      if (file.startsWith('capabilities/')) {
-        const parts = file.split('/');
-        if (parts.length > 1) {
-          capabilityDirs.add(parts[1]);
-        }
-      }
-    });
-
-    // Extract capability details from zip
-    const capabilityDetails = await Promise.all(
-      Array.from(capabilityDirs).map(async (capName) => {
-        try {
-          const schemaFile = zip.file(`capabilities/${capName}/schema.json`);
-          const runnerFile = zip.file(`capabilities/${capName}/runner.ts`);
-
-          if (!schemaFile || !runnerFile) return null;
-
-          const [schemaContent, runnerContent] = await Promise.all([
-            schemaFile.async('string'),
-            runnerFile.async('string')
-          ]);
-
-          return {
-            name: capName,
-            schema: JSON.parse(schemaContent),
-            runnerCode: runnerContent
-          };
-        } catch (error) {
-          console.error(`Error extracting capability ${capName}:`, error);
-          return null;
-        }
-      })
-    );
+    // Process capabilities with their schema and runner code
+    const processedCapabilities = capabilities?.map((cap: Capability) => ({
+      id: cap.id,
+      name: cap.name,
+      description: cap.description,
+      key: cap.key,
+      schema: cap.schema
+    })) || [];
 
     return {
-      id,
-      ...metadata,
-      capabilities: capabilityDetails.filter(Boolean)
+      ...tool,
+      capabilities: processedCapabilities
     };
   } catch (error) {
     console.error('Error fetching tool:', error);

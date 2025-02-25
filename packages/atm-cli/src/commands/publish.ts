@@ -2,7 +2,6 @@ import path from 'path';
 import os from 'os';
 import fs from 'fs';
 import { createClient } from '@supabase/supabase-js';
-import tar from 'tar';
 import { CONFIG_DIR, CONFIG_FILE } from '../config';
 
 const SUPABASE_URL='https://hnibcchiknipqongruty.supabase.co'
@@ -21,6 +20,49 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
     return null;
   }
 });
+
+async function uploadDirectory(userId: string, handle: string, dirPath: string) {
+  const files: string[] = [];
+  
+  // Recursively get all files in the directory
+  function getAllFiles(dir: string) {
+    const entries = fs.readdirSync(dir, { withFileTypes: true });
+    
+    for (const entry of entries) {
+      const fullPath = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        getAllFiles(fullPath);
+      } else {
+        files.push(fullPath);
+      }
+    }
+  }
+  
+  getAllFiles(dirPath);
+  
+  // Upload each file
+  const uploads = files.map(async (filePath) => {
+    const relativePath = path.relative(dirPath, filePath);
+    const storagePath = `${userId}/${handle}/${relativePath}`;
+    const fileContent = fs.readFileSync(filePath);
+    
+    const { error: uploadError } = await supabase.storage
+      .from('atm_tools')
+      .upload(storagePath, fileContent, {
+        contentType: 'text/plain',
+        upsert: true
+      });
+      
+    if (uploadError) {
+      throw new Error(`Failed to upload ${relativePath}: ${uploadError.message}`);
+    }
+    
+    return storagePath;
+  });
+  
+  await Promise.all(uploads);
+  return `${userId}/${handle}`;
+}
 
 export async function publishTool(toolPath: string = '.') {
   try {
@@ -66,49 +108,9 @@ export async function publishTool(toolPath: string = '.') {
       throw new Error('You do not have permission to update this tool');
     }
 
-    // Create a temporary directory for the archive
-    const tmpDir = path.join(os.tmpdir(), 'atm-publish');
-    if (!fs.existsSync(tmpDir)) {
-      fs.mkdirSync(tmpDir);
-    }
-
-    // Create the archive path
-    const archivePath = path.join(tmpDir, `${handle}.tar.gz`);
-
-    // Create a gzipped tar archive of the dist directory
-    console.log('Creating archive...');
-    await tar.create(
-      {
-        gzip: true,
-        file: archivePath,
-        cwd: process.cwd(),
-      },
-      ['dist']
-    );
-
-    // Upload the archive to Supabase Storage
-    console.log('Uploading archive...');
-    const filePath = `${userId}/${handle}.tar.gz`;
-    const fileBuffer = fs.readFileSync(archivePath);
-
-    const { data: uploadData, error: uploadError } = await supabase.storage
-      .from('atm_tools')
-      .upload(filePath, fileBuffer, {
-        contentType: 'application/gzip',
-        upsert: true
-      });
-
-    if (uploadError) {
-      throw new Error(`Failed to upload archive: ${uploadError.message}`);
-    }
-
-    if (!uploadData) {
-      throw new Error('Failed to get storage file ID after upload');
-    }
-
-    // Clean up temporary files
-    fs.unlinkSync(archivePath);
-    fs.rmdirSync(tmpDir);
+    // Upload the dist directory contents
+    console.log('Uploading files...');
+    const basePath = await uploadDirectory(userId, handle, distPath);
 
     // Save or update tool metadata to database
     const { data: tool, error: toolError } = await supabase
@@ -118,7 +120,7 @@ export async function publishTool(toolPath: string = '.') {
         name: metadata.name,
         description: metadata.description,
         owner_id: userId,
-        file_path: uploadData.path
+        file_path: basePath
       }, {
         onConflict: 'handle'
       })
@@ -132,7 +134,9 @@ export async function publishTool(toolPath: string = '.') {
     if (!tool) {
       throw new Error('Failed to get tool ID after saving metadata');
     }
+
     console.log('Tool ID:', tool.id);
+
     // Delete existing capabilities for this tool
     const { error: deleteError } = await supabase
       .from('atm_tool_capabilities')
