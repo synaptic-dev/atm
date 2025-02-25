@@ -22,7 +22,7 @@ export default async function ToolsPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-sm text-gray-500">
-                  {tool.capabilities.length} capabilities
+                  {(tool.capabilities || []).length} capabilities
                 </div>
               </CardContent>
             </Card>

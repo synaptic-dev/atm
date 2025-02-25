@@ -1,10 +1,6 @@
-import { Input } from "@/components/ui/input"
-import { Search } from "lucide-react"
-import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import Link from "next/link"
-import { getTools } from "@/lib/s3"
 import { Button } from '@/components/ui/button'
 import { ArrowRight } from 'lucide-react'
+import Link from "next/link"
 
 // Make the page dynamic to ensure we get fresh data
 export const dynamic = 'force-dynamic';
@@ -38,16 +34,3 @@ export default function Home() {
     </div>
   )
 }
-
-const featuredTools = [
-  {
-    id: "google-calendar",
-    name: "Google Calendar",
-    description: "Access and manage Google Calendar events and schedules programmatically"
-  },
-  {
-    id: "hello-world",
-    name: "Hello World",
-    description: "A simple tool to demonstrate the basics of ATM tools"
-  }
-]

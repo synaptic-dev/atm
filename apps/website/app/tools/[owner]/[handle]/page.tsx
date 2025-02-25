@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { notFound } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -8,6 +8,7 @@ const SUPABASE_URL='https://hnibcchiknipqongruty.supabase.co';
 const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhuaWJjY2hpa25pcHFvbmdydXR5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzE4NDA3MTksImV4cCI6MjA0NzQxNjcxOX0.ocOf570HeHOoc8ZgKyXeLAJEO90BJ-yQfnPtgBiINKs';
 
 interface Tool {
+  id: string;
   name: string;
   handle: string;
   owner_id: string;
@@ -25,7 +26,12 @@ interface Capability {
   runner: string;
 }
 
-async function getCapabilityFiles(supabase: any, filePath: string, key: string) {
+interface CapabilityFiles {
+  schema: string;
+  runner: string;
+}
+
+async function getCapabilityFiles(supabase: SupabaseClient, filePath: string, key: string): Promise<CapabilityFiles> {
   try {
     // Construct paths for schema and runner files
     const schemaPath = `${filePath}/capabilities/${key}/schema.ts`;
@@ -65,17 +71,20 @@ async function getCapabilityFiles(supabase: any, filePath: string, key: string) 
 
     return { schema, runner };
   } catch (error) {
-    console.error('Error processing capability files:', error);
+    console.error('Error processing capability files:', error instanceof Error ? error.message : error);
     return { schema: '', runner: '' };
   }
 }
 
-export default async function ToolPage({
-  params,
-}: {
-  params: Promise<{ owner: string; handle: string }>
-}) {
-  const { owner, handle } = await params;
+interface PageParams {
+  params: {
+    owner: string;
+    handle: string;
+  };
+}
+
+export default async function ToolPage({ params }: PageParams) {
+  const { owner, handle } = params;
   const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
   
   console.log('owner', owner);

@@ -1,11 +1,31 @@
 import path from 'path';
 import os from 'os';
 import fs from 'fs';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { CONFIG_DIR, CONFIG_FILE } from '../config';
 
 const SUPABASE_URL='https://hnibcchiknipqongruty.supabase.co'
 const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhuaWJjY2hpa25pcHFvbmdydXR5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzE4NDA3MTksImV4cCI6MjA0NzQxNjcxOX0.ocOf570HeHOoc8ZgKyXeLAJEO90BJ-yQfnPtgBiINKs'
+
+interface ToolMetadata {
+  name: string;
+  handle: string;
+  description: string;
+  capabilities: Array<{
+    name: string;
+    description: string;
+    key: string;
+  }>;
+}
+
+interface Tool {
+  id: string;
+  handle: string;
+  name: string;
+  description: string;
+  owner_id: string;
+  file_path: string;
+}
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
   accessToken: () => {
@@ -21,11 +41,11 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
   }
 });
 
-async function uploadDirectory(userId: string, handle: string, dirPath: string) {
+async function uploadDirectory(supabase: SupabaseClient, userId: string, handle: string, dirPath: string): Promise<string> {
   const files: string[] = [];
   
   // Recursively get all files in the directory
-  function getAllFiles(dir: string) {
+  function getAllFiles(dir: string): void {
     const entries = fs.readdirSync(dir, { withFileTypes: true });
     
     for (const entry of entries) {
@@ -64,7 +84,7 @@ async function uploadDirectory(userId: string, handle: string, dirPath: string) 
   return `${userId}/${handle}`;
 }
 
-export async function publishTool(toolPath: string = '.') {
+export async function publishTool(toolPath: string = '.'): Promise<void> {
   try {
     // Check if dist directory exists
     const distPath = path.join(process.cwd(), 'dist');
@@ -78,7 +98,7 @@ export async function publishTool(toolPath: string = '.') {
       throw new Error('No metadata.json found in dist directory');
     }
 
-    const metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf-8'));
+    const metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf-8')) as ToolMetadata;
     const { handle } = metadata;
 
     // Load JWT from config file
@@ -86,7 +106,7 @@ export async function publishTool(toolPath: string = '.') {
       throw new Error('Please login first using: atm login');
     }
 
-    const config = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf-8'));
+    const config = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf-8')) as { user_id: string };
     const userId = config.user_id;
 
     if (!userId) {
@@ -110,7 +130,7 @@ export async function publishTool(toolPath: string = '.') {
 
     // Upload the dist directory contents
     console.log('Uploading files...');
-    const basePath = await uploadDirectory(userId, handle, distPath);
+    const basePath = await uploadDirectory(supabase, userId, handle, distPath);
 
     // Save or update tool metadata to database
     const { data: tool, error: toolError } = await supabase
@@ -167,8 +187,8 @@ export async function publishTool(toolPath: string = '.') {
 
     console.log(`Tool ${handle} published successfully!`);
     console.log('Metadata:', metadata);
-  } catch (error: any) {
-    console.error('Error publishing tool:', error?.message || error);
+  } catch (error) {
+    console.error('Error publishing tool:', error instanceof Error ? error.message : error);
     process.exit(1);
   }
 }

@@ -69,6 +69,9 @@ importers:
       '@hookform/resolvers':
         specifier: ^3.10.0
         version: 3.10.0(react-hook-form@7.54.2)
+      '@octokit/openapi-types':
+        specifier: ^24.0.0
+        version: 24.0.0
       '@octokit/rest':
         specifier: ^21.1.0
         version: 21.1.0
@@ -470,6 +473,19 @@ importers:
         version: 5.7.3
 
   tools/hello-world:
+    dependencies:
+      '@synaptic-ai/toolmaker':
+        specifier: workspace:*
+        version: link:../../packages/toolmaker
+      zod:
+        specifier: ^3.24.1
+        version: 3.24.1
+    devDependencies:
+      typescript:
+        specifier: ^5.2.2
+        version: 5.7.3
+
+  tools/hello-world-2:
     dependencies:
       '@synaptic-ai/toolmaker':
         specifier: workspace:*
@@ -2376,6 +2392,10 @@ packages:
 
   /@octokit/openapi-types@23.0.1:
     resolution: {integrity: sha512-izFjMJ1sir0jn0ldEKhZ7xegCTj/ObmEDlEfpFrx4k/JyZSMRHbO3/rBwgE7f3m2DHt+RrNGIVw4wSmwnm3t/g==}
+    dev: false
+
+  /@octokit/openapi-types@24.0.0:
+    resolution: {integrity: sha512-os8hmzrBPC3PDzXq93/9vBcxMvb90yw2SF76ANon+eP1HzVyd+TshkAkMX6bIm3bY5T3uXieQFDibcc35vM9mQ==}
     dev: false
 
   /@octokit/plugin-paginate-rest@11.4.0(@octokit/core@6.1.3):

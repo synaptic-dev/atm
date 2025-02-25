@@ -1,4 +1,6 @@
 import { Octokit } from "@octokit/rest";
+import { createClient } from '@supabase/supabase-js';
+import type { components } from "@octokit/openapi-types";
 
 const octokit = new Octokit({
   auth: process.env.GITHUB_TOKEN, // Optional: Add token for higher rate limits
@@ -6,6 +8,11 @@ const octokit = new Octokit({
 
 const REPO_OWNER = 'sier-ai';
 const REPO_NAME = 'atm';
+
+const SUPABASE_URL = 'https://hnibcchiknipqongruty.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhuaWJjY2hpa25pcHFvbmdydXR5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzE4NDA3MTksImV4cCI6MjA0NzQxNjcxOX0.ocOf570HeHOoc8ZgKyXeLAJEO90BJ-yQfnPtgBiINKs';
+
+type ContentEntry = components["schemas"]["content-directory"][number];
 
 export interface Tool {
   id: string;
@@ -16,8 +23,8 @@ export interface Tool {
   capabilities: Array<{
     name: string;
     description: string;
-    schema?: any;
-    runnerCode?: string;
+    schema: Record<string, unknown>;
+    runnerCode: string;
   }>;
 }
 
@@ -36,7 +43,7 @@ export async function getTools(): Promise<Tool[]> {
 
     // Fetch metadata.json for each tool
     const tools = await Promise.all(
-      directories.map(async (dir: any) => {
+      directories.map(async (dir: ContentEntry) => {
         try {
           const { data: metadata } = await octokit.repos.getContent({
             owner: REPO_OWNER,
@@ -94,7 +101,7 @@ export async function getTool(id: string): Promise<Tool | null> {
 
     // Fetch schema and runner for each capability
     const capabilityDetails = await Promise.all(
-      capabilities.map(async (cap: any) => {
+      capabilities.map(async (cap: ContentEntry) => {
         const [{ data: schema }, { data: runner }] = await Promise.all([
           octokit.repos.getContent({
             owner: REPO_OWNER,
@@ -129,4 +136,92 @@ export async function getTool(id: string): Promise<Tool | null> {
     console.error('Error fetching tool:', error);
     return null;
   }
+}
+
+interface GithubUser {
+  id: number;
+  login: string;
+  name: string | null;
+  email: string | null;
+  avatar_url: string;
+}
+
+interface GithubError {
+  message: string;
+  documentation_url?: string;
+}
+
+export async function getGithubUser(accessToken: string): Promise<GithubUser> {
+  const response = await fetch('https://api.github.com/user', {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      Accept: 'application/vnd.github.v3+json',
+    },
+  });
+
+  if (!response.ok) {
+    const error = (await response.json()) as GithubError;
+    throw new Error(error.message);
+  }
+
+  return response.json() as Promise<GithubUser>;
+}
+
+export async function handleGithubCallback(code: string): Promise<{ access_token: string; user_id: string }> {
+  const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  // Exchange code for access token
+  const tokenResponse = await fetch('https://github.com/login/oauth/access_token', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    },
+    body: JSON.stringify({
+      client_id: process.env.NEXT_PUBLIC_GITHUB_CLIENT_ID,
+      client_secret: process.env.GITHUB_CLIENT_SECRET,
+      code,
+    }),
+  });
+
+  if (!tokenResponse.ok) {
+    throw new Error('Failed to exchange code for access token');
+  }
+
+  const tokenData = await tokenResponse.json();
+  if (tokenData.error) {
+    throw new Error(tokenData.error_description || 'Failed to exchange code for access token');
+  }
+
+  const accessToken = tokenData.access_token;
+
+  // Get user info from GitHub
+  const user = await getGithubUser(accessToken);
+
+  // Store user info in Supabase
+  const { data: userData, error: userError } = await supabase
+    .from('users')
+    .upsert({
+      id: user.id.toString(),
+      github_login: user.login,
+      name: user.name,
+      email: user.email,
+      avatar_url: user.avatar_url,
+      access_token: accessToken,
+    })
+    .select()
+    .single();
+
+  if (userError) {
+    throw new Error(`Failed to store user data: ${userError.message}`);
+  }
+
+  if (!userData) {
+    throw new Error('Failed to get user data after storing');
+  }
+
+  return {
+    access_token: accessToken,
+    user_id: userData.id,
+  };
 } 
