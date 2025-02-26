@@ -1,23 +1,35 @@
 import { Button } from '@/components/ui/button'
 import { ArrowRight } from 'lucide-react'
 import Link from "next/link"
+import { SearchTools } from '@/components/search-tools'
+import { ToolGrid } from '@/components/tool-grid'
+import { getTools } from '@/lib/s3'
+import { CopyableCodeBlock } from '@/components/CopyableCodeBlock'
 
-// Make the page dynamic to ensure we get fresh data
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
+// Revalidate the page every hour
+export const revalidate = 3600;
 
-export default function Home() {
+export default async function Home() {
+  const tools = await getTools();
+
   return (
-    <div className="container mx-auto py-16">
-      <div className="max-w-3xl mx-auto text-center">
-        <h1 className="text-6xl font-bold mb-6">
-          AI Tool Manager
+    <div className="container max-w-7xl mx-auto px-4 py-16">
+      {/* Hero Section */}
+      <div className="max-w-2xl mx-auto text-center mb-16">
+        <h1 className="text-5xl font-bold mb-4">
+          ATM
         </h1>
-        <p className="text-xl text-gray-600 mb-8">
-          Discover, manage, and integrate AI tools seamlessly into your applications.
-          ATM provides a unified interface for working with AI capabilities.
+        <p className="text-lg text-gray-600 mb-6">
+          Create, share and discover agent tools on ATM.
         </p>
-        <div className="flex items-center justify-center gap-4">
+        <div className="max-w-sm mx-auto mb-6">
+          <CopyableCodeBlock 
+            code="npm install @synaptic-ai/atm"
+            language="bash"
+          />
+        </div>
+        <SearchTools />
+        <div className="flex items-center justify-center gap-4 mt-8">
           <Link href="/tools">
             <Button size="lg" className="gap-2">
               Browse Tools
@@ -31,6 +43,17 @@ export default function Home() {
           </Link>
         </div>
       </div>
+
+      {/* Tools Section */}
+      <section>
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-bold">Available Tools</h2>
+          <Link href="/tools" className="text-sm text-gray-500 hover:text-gray-700">
+            View all →
+          </Link>
+        </div>
+        <ToolGrid tools={tools} limit={6} />
+      </section>
     </div>
   )
 }

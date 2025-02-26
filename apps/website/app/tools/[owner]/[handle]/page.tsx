@@ -1,103 +1,11 @@
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { notFound } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CodeBlock } from '@/components/CodeBlock';
+import { getTool, getTools } from '@/lib/s3';
 
-const SUPABASE_URL = 'https://hnibcchiknipqongruty.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhuaWJjY2hpa25pcHFvbmdydXR5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzE4NDA3MTksImV4cCI6MjA0NzQxNjcxOX0.ocOf570HeHOoc8ZgKyXeLAJEO90BJ-yQfnPtgBiINKs';
-
-interface Database {
-  public: {
-    Tables: {
-      atm_tools: {
-        Row: Tool;
-      };
-      atm_tool_capabilities: {
-        Row: Capability;
-      };
-    };
-    Buckets: {
-      atm_tools: {
-        Row: {
-          name: string;
-          owner: string;
-          file: string;
-          updated_at: string;
-        };
-      };
-    };
-  };
-}
-
-interface Tool {
-  id: string;
-  name: string;
-  handle: string;
-  owner_id: string;
-  description: string;
-  file_path: string;
-  capabilities: Capability[];
-}
-
-interface Capability {
-  id: string;
-  name: string;
-  description: string;
-  key: string;
-  schema: string;
-  runner: string;
-}
-
-interface CapabilityFiles {
-  schema: string;
-  runner: string;
-}
-
-async function getCapabilityFiles(supabase: SupabaseClient<Database>, filePath: string, key: string): Promise<CapabilityFiles> {
-  try {
-    // Construct paths for schema and runner files
-    const schemaPath = `${filePath}/capabilities/${key}/schema.ts`;
-    const runnerPath = `${filePath}/capabilities/${key}/runner.ts`;
-
-    // Get public URLs for both files
-    const { data: schemaUrlData } = supabase.storage
-      .from('atm_tools')
-      .getPublicUrl(schemaPath);
-
-    const { data: runnerUrlData } = supabase.storage
-      .from('atm_tools')
-      .getPublicUrl(runnerPath);
-
-    if (!schemaUrlData?.publicUrl || !runnerUrlData?.publicUrl) {
-      console.error('Error getting public URLs');
-      return { schema: '', runner: '' };
-    }
-
-    // Download both files
-    const [schemaRes, runnerRes] = await Promise.all([
-      fetch(schemaUrlData.publicUrl),
-      fetch(runnerUrlData.publicUrl)
-    ]);
-
-    if (!schemaRes.ok || !runnerRes.ok) {
-      console.error('Error downloading files:', {
-        schema: schemaRes.statusText,
-        runner: runnerRes.statusText
-      });
-      return { schema: '', runner: '' };
-    }
-
-    // Get the text content
-    const schema = await schemaRes.text();
-    const runner = await runnerRes.text();
-
-    return { schema, runner };
-  } catch (error) {
-    console.error('Error processing capability files:', error instanceof Error ? error.message : error);
-    return { schema: '', runner: '' };
-  }
-}
+// Revalidate the page every hour
+export const revalidate = 3600;
 
 interface PageProps {
   params: Promise<{
@@ -106,59 +14,29 @@ interface PageProps {
   }>;
 }
 
+// Generate static params for all tools
+export async function generateStaticParams() {
+  const tools = await getTools();
+  
+  return tools.map((tool) => ({
+    owner: tool.owner_username,
+    handle: tool.handle,
+  }));
+}
+
 export default async function ToolPage({ params }: PageProps) {
   const { owner, handle } = await params;
-  const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_KEY);
   
-  console.log('owner', owner);
-  console.log('handle', handle);
-
-  // Fetch basic tool information
-  const { data: toolData, error: toolError } = await supabase
-    .from('atm_tools')
-    .select('*')
-    .eq('owner_id', owner)
-    .eq('handle', handle)
-    .single();
-
-  if (toolError || !toolData) {
-    console.error('Error fetching tool:', toolError);
+  const tool = await getTool(owner, handle);
+  if (!tool) {
     notFound();
   }
-
-  // Fetch tool capabilities
-  const { data: capabilities, error: capsError } = await supabase
-    .from('atm_tool_capabilities')
-    .select('*')
-    .eq('tool_id', toolData.id);
-
-  if (capsError) {
-    console.error('Error fetching capabilities:', capsError);
-    notFound();
-  }
-
-  // Fetch schema and runner code for each capability
-  const capabilitiesWithCode = await Promise.all(
-    (capabilities || []).map(async (cap) => {
-      const { schema, runner } = await getCapabilityFiles(supabase, toolData.file_path, cap.key);
-      return {
-        ...cap,
-        schema,
-        runner
-      };
-    })
-  );
-
-  const tool: Tool = {
-    ...toolData,
-    capabilities: capabilitiesWithCode
-  };
 
   return (
     <div className="container mx-auto py-8">
       <div className="mb-8">
         <h1 className="text-4xl font-bold mb-2">{tool.name}</h1>
-        <p className="text-lg text-gray-600">{tool.owner_id} / {tool.handle}</p>
+        <p className="text-lg text-gray-600">{tool.owner_username} / {tool.handle}</p>
       </div>
       <p className="text-lg text-gray-600 mb-8">{tool.description}</p>
 
