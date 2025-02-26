@@ -12,6 +12,7 @@ export interface Tool {
   owner_username: string;
   description: string;
   file_path: string;
+  created_at: string;
   capabilities: Capability[];
 }
 
@@ -43,21 +44,27 @@ async function downloadFileContent(supabase: SupabaseClient, path: string): Prom
   }
 }
 
-export async function getTools(): Promise<Tool[]> {
+export async function getTools(limit?: number, search?: string): Promise<Tool[]> {
   try {
-    // Fetch all tools with explicit field selection
-    const { data: tools } = await supabase
+    // Base query
+    let query = supabase
       .from('atm_tools')
-      .select(`
-        id,
-        name,
-        handle,
-        owner_username,
-        description,
-        file_path
-      `);
+      .select()
+      .order('created_at', { ascending: false });
 
-    if (!tools) {
+    // Apply search if provided
+    if (search) {
+      query = query.ilike('name', `%${search}%`);
+    }
+
+    if (limit) {
+      query.limit(limit);
+    }
+
+    const { data: tools, error } = await query;
+
+    if (error || !tools) {
+      console.error('Error fetching tools:', error);
       return [];
     }
 
@@ -76,7 +83,13 @@ export async function getTools(): Promise<Tool[]> {
         }
 
         return {
-          ...tool,
+          id: tool.id,
+          name: tool.name,
+          handle: tool.handle,
+          owner_username: tool.owner_username,
+          description: tool.description,
+          file_path: tool.file_path,
+          created_at: tool.created_at,
           capabilities: capabilities || []
         };
       })
@@ -101,7 +114,8 @@ export async function getTool(username: string, handle: string): Promise<Tool | 
         handle,
         owner_username,
         description,
-        file_path
+        file_path,
+        created_at
       `)
       .eq('owner_username', username)
       .eq('handle', handle)

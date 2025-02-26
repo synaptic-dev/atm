@@ -1,16 +1,15 @@
 import { Button } from '@/components/ui/button'
 import { ArrowRight } from 'lucide-react'
 import Link from "next/link"
-import { SearchTools } from '@/components/search-tools'
 import { ToolGrid } from '@/components/tool-grid'
 import { getTools } from '@/lib/supabase/tools'
-import { CopyableCodeBlock } from '@/components/CopyableCodeBlock'
+import { CodeBlock } from '@/components/CodeBlock'
 
 // Revalidate the page every hour
 export const revalidate = 3600;
 
 export default async function Home() {
-  const tools = await getTools();
+  const tools = await getTools(10);
 
   return (
     <div className="container max-w-7xl mx-auto px-4 py-16">
@@ -23,12 +22,11 @@ export default async function Home() {
           Create, share and discover agent tools on ATM.
         </p>
         <div className="max-w-sm mx-auto mb-6">
-          <CopyableCodeBlock 
+          <CodeBlock 
             code="npm install @synaptic-ai/atm"
             language="bash"
           />
         </div>
-        <SearchTools />
         <div className="flex items-center justify-center gap-4 mt-8">
           <Link href="/tools">
             <Button size="lg" className="gap-2">
@@ -47,12 +45,12 @@ export default async function Home() {
       {/* Tools Section */}
       <section>
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold">Available Tools</h2>
+          <h2 className="text-2xl font-bold">Latest</h2>
           <Link href="/tools" className="text-sm text-gray-500 hover:text-gray-700">
             View all →
           </Link>
         </div>
-        <ToolGrid tools={tools} limit={6} />
+        <ToolGrid tools={tools} />
       </section>
     </div>
   )

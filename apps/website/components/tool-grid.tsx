@@ -23,7 +23,7 @@ export function ToolGrid({ tools, limit }: ToolGridProps) {
             <CardHeader>
               <CardTitle>{tool.name}</CardTitle>
               <CardDescription>
-                <span className="text-sm text-gray-500">{tool.owner_username} / {tool.handle}</span>
+                <span className="text-sm text-gray-500">by {tool.owner_username}</span>
                 <p className="mt-1">{tool.description}</p>
               </CardDescription>
             </CardHeader>
