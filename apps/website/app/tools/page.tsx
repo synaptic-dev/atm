@@ -1,5 +1,5 @@
-import { getTools } from '@/lib/s3';
-import { Tool } from '@/lib/s3';
+import { getTools } from '@/lib/supabase/tools';
+import { Tool } from '@/lib/supabase/tools';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import Link from 'next/link';
 

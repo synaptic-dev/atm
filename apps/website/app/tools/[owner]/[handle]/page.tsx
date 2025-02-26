@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CodeBlock } from '@/components/CodeBlock';
-import { getTool, getTools } from '@/lib/s3';
+import { getTool, getTools } from '@/lib/supabase/tools';
 
 // Revalidate the page every hour
 export const revalidate = 3600;

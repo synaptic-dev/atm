@@ -1,6 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import Link from 'next/link';
-import { Tool } from '@/lib/s3';
+import { Tool } from '@/lib/supabase/tools';
 
 interface ToolGridProps {
   tools: Tool[];
@@ -13,8 +13,13 @@ export function ToolGrid({ tools, limit }: ToolGridProps) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {displayTools.map((tool: Tool) => (
-        <Link key={tool.id} href={`/tools/${tool.owner_username}/${tool.handle}`}>
-          <Card className="h-full hover:shadow-lg transition-shadow">
+        <Link 
+          key={tool.id} 
+          href={`/tools/${tool.owner_username}/${tool.handle}`}
+          prefetch={true}
+          className="block h-full"
+        >
+          <Card className="h-full hover:shadow-lg transition-shadow cursor-pointer">
             <CardHeader>
               <CardTitle>{tool.name}</CardTitle>
               <CardDescription>

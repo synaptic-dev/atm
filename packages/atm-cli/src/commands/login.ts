@@ -18,19 +18,21 @@ export async function login() {
     const url = new URL(req.url!, `http://localhost:${AUTH_PORT}`);
     const accessToken = url.searchParams.get('access_token');
     const refreshToken = url.searchParams.get('refresh_token');
-    const userId = url.searchParams.get('user_id'); // Extract user_id from the request
+    const userId = url.searchParams.get('user_id');
+    const username = url.searchParams.get('username'); // Extract username from the request
 
-    if (accessToken && refreshToken && userId) { // Ensure user_id is present
+    if (accessToken && refreshToken && userId && username) { // Ensure username is present
       // Create config directory if it doesn't exist
       if (!fs.existsSync(CONFIG_DIR)) {
         fs.mkdirSync(CONFIG_DIR, { recursive: true });
       }
 
-      // Save tokens and user_id to config file
+      // Save tokens, user_id, and username to config file
       const config = {
         access_token: accessToken,
         refresh_token: refreshToken,
-        user_id: userId, // Save user_id
+        user_id: userId,
+        username: username, // Save username
         updated_at: new Date().toISOString()
       };
 
@@ -59,7 +61,7 @@ export async function login() {
         <html>
           <body>
             <h1>Authentication Failed</h1>
-            <p>Missing required tokens or user_id. Please try again.</p>
+            <p>Missing required tokens, user_id, or username. Please try again.</p>
           </body>
         </html>
       `);

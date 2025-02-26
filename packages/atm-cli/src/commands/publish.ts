@@ -24,6 +24,7 @@ interface Tool {
   name: string;
   description: string;
   owner_id: string;
+  owner_username: string;
   file_path: string;
 }
 
@@ -106,11 +107,15 @@ export async function publishTool(toolPath: string = '.'): Promise<void> {
       throw new Error('Please login first using: atm login');
     }
 
-    const config = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf-8')) as { user_id: string };
+    const config = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf-8')) as { 
+      user_id: string;
+      username: string;
+    };
     const userId = config.user_id;
+    const username = config.username;
 
-    if (!userId) {
-      throw new Error('No user ID found. Please login first using: atm login');
+    if (!userId || !username) {
+      throw new Error('No user ID or username found. Please login first using: atm login');
     }
 
     // Check if tool exists and belongs to the user
@@ -124,7 +129,7 @@ export async function publishTool(toolPath: string = '.'): Promise<void> {
       throw new Error(`Failed to check existing tool: ${toolCheckError.message}`);
     }
 
-    if (existingTool && existingTool.owner_id !== userId) {
+    if (existingTool && existingTool.owner_username !== username) {
       throw new Error('You do not have permission to update this tool');
     }
 
@@ -139,7 +144,7 @@ export async function publishTool(toolPath: string = '.'): Promise<void> {
         handle,
         name: metadata.name,
         description: metadata.description,
-        owner_id: userId,
+        owner_username: username,
         file_path: basePath
       }, {
         onConflict: 'handle'

@@ -3,7 +3,7 @@ import { ArrowRight } from 'lucide-react'
 import Link from "next/link"
 import { SearchTools } from '@/components/search-tools'
 import { ToolGrid } from '@/components/tool-grid'
-import { getTools } from '@/lib/s3'
+import { getTools } from '@/lib/supabase/tools'
 import { CopyableCodeBlock } from '@/components/CopyableCodeBlock'
 
 // Revalidate the page every hour
