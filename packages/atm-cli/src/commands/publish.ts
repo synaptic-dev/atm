@@ -189,7 +189,7 @@ export async function publishTool(toolPath: string = '.'): Promise<void> {
     }
 
     console.log(`✨ Successfully published ${metadata.name} to ATM`);
-    console.log(`🔗 View your tool at: https://try-synaptic.ai/tools/${username}/${handle}`);
+    console.log(`🔗 View your tool at: https://try-synaptic.ai/atm/tools/${username}/${handle}`);
   } catch (error) {
     console.error('❌ Failed to publish tool:', error instanceof Error ? error.message : error);
     process.exit(1);
