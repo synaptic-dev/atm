@@ -147,7 +147,7 @@ export async function publishTool(toolPath: string = '.'): Promise<void> {
         file_path: basePath,
         owner_id: userId
       }, {
-        onConflict: 'handle'
+        onConflict: 'handle,owner_username,owner_id'
       })
       .select()
       .single();
