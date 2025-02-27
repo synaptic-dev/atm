@@ -3,6 +3,7 @@
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { SearchInput } from "./search-input"
+import { Github } from "lucide-react"
 
 export function Header() {
   return (
@@ -33,6 +34,14 @@ export function Header() {
             className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
           >
             Docs
+          </a>
+          <a
+            href="https://github.com/synaptic-dev/atm"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary flex items-center"
+          >
+            <Github className="h-5 w-5" />
           </a>
           
           <Button size="sm" asChild>
