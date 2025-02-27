@@ -1,6 +1,6 @@
 {
   "name": "@synaptic-ai/atm",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "ATM (Agent Tool Manager) CLI By Synaptic - Build, Publish and Share your awesome AI Agent tools",
   "scripts": {
     "build": "tsup src/index.ts src/commands/*.ts --format cjs,esm --dts --clean",
@@ -22,7 +22,7 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.39.7",
-    "@synaptic-ai/toolmaker": "workspace:*",
+    "@synaptic-ai/toolmaker": "0.0.1",
     "commander": "^11.1.0",
     "esbuild": "^0.20.0",
     "prettier": "^3.2.5",
