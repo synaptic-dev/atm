@@ -37,7 +37,7 @@ export function Header() {
           
           <Button size="sm" asChild>
             <a 
-              href="https://try-synaptic.ai/login?next=/atm"
+              href="https://try-synaptic.ai/published-tools"
               target="_blank"
               rel="noopener noreferrer"
             >
