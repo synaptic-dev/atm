@@ -23,7 +23,7 @@ export default async function Home() {
         </p>
         <div className="max-w-sm mx-auto mb-6">
           <CodeBlock 
-            code="npm install @synaptic-ai/atm"
+            code="npm install -g @synaptic-ai/atm"
             language="bash"
           />
         </div>
