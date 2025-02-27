@@ -1,11 +1,15 @@
 import path from 'path';
-import os from 'os';
 import fs from 'fs';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { CONFIG_DIR, CONFIG_FILE } from '../config';
+import { CONFIG_FILE } from '../config';
 
-const SUPABASE_URL='https://hnibcchiknipqongruty.supabase.co'
-const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhuaWJjY2hpa25pcHFvbmdydXR5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzE4NDA3MTksImV4cCI6MjA0NzQxNjcxOX0.ocOf570HeHOoc8ZgKyXeLAJEO90BJ-yQfnPtgBiINKs'
+interface Config {
+  access_token: string;
+  user_id: string;
+  username: string;
+  supabase_url: string;
+  supabase_key: string;
+}
 
 interface ToolMetadata {
   name: string;
@@ -28,21 +32,21 @@ interface Tool {
   file_path: string;
 }
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
-  accessToken: () => {
-    try {
-      if (fs.existsSync(CONFIG_FILE)) {
-        const config = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf-8'));
-        return config.access_token;
-      }
-    } catch (error) {
-      console.error('Error reading config file:', error);
-    }
-    return null;
+function getConfig(): Config {
+  if (!fs.existsSync(CONFIG_FILE)) {
+    throw new Error('Please login first using: atm login');
   }
-});
+  return JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf-8'));
+}
 
-async function uploadDirectory(supabase: SupabaseClient, userId: string, handle: string, dirPath: string): Promise<string> {
+function createSupabaseClient(config: Config): SupabaseClient {
+  return createClient(config.supabase_url, config.supabase_key, {
+    accessToken: () => Promise.resolve(config.access_token)
+  });
+}
+
+async function uploadDirectory(config: Config, userId: string, handle: string, dirPath: string): Promise<string> {
+  const supabase = createSupabaseClient(config);
   const files: string[] = [];
   
   // Recursively get all files in the directory
@@ -102,15 +106,8 @@ export async function publishTool(toolPath: string = '.'): Promise<void> {
     const metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf-8')) as ToolMetadata;
     const { handle } = metadata;
 
-    // Load JWT from config file
-    if (!fs.existsSync(CONFIG_FILE)) {
-      throw new Error('Please login first using: atm login');
-    }
-
-    const config = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf-8')) as { 
-      user_id: string;
-      username: string;
-    };
+    const config = getConfig();
+    const supabase = createSupabaseClient(config);
     const userId = config.user_id;
     const username = config.username;
 
@@ -125,7 +122,7 @@ export async function publishTool(toolPath: string = '.'): Promise<void> {
       .eq('handle', handle)
       .single();
 
-    if (toolCheckError && toolCheckError.code !== 'PGRST116') { // PGRST116 is "not found" error
+    if (toolCheckError && toolCheckError.code !== 'PGRST116') {
       throw new Error(`Failed to check existing tool: ${toolCheckError.message}`);
     }
 
@@ -133,9 +130,10 @@ export async function publishTool(toolPath: string = '.'): Promise<void> {
       throw new Error('You do not have permission to update this tool');
     }
 
+    console.log(`Publishing ${metadata.name} to ATM...`);
+
     // Upload the dist directory contents
-    console.log('Uploading files...');
-    const basePath = await uploadDirectory(supabase, userId, handle, distPath);
+    const basePath = await uploadDirectory(config, userId, handle, distPath);
 
     // Save or update tool metadata to database
     const { data: tool, error: toolError } = await supabase
@@ -159,8 +157,6 @@ export async function publishTool(toolPath: string = '.'): Promise<void> {
     if (!tool) {
       throw new Error('Failed to get tool ID after saving metadata');
     }
-
-    console.log('Tool ID:', tool.id);
 
     // Delete existing capabilities for this tool
     const { error: deleteError } = await supabase
@@ -190,10 +186,10 @@ export async function publishTool(toolPath: string = '.'): Promise<void> {
       }
     }
 
-    console.log(`Tool ${handle} published successfully!`);
-    console.log('Metadata:', metadata);
+    console.log(`✨ Successfully published ${metadata.name} to ATM`);
+    console.log(`🔗 View your tool at: https://try-synaptic.ai/tools/${username}/${handle}`);
   } catch (error) {
-    console.error('Error publishing tool:', error instanceof Error ? error.message : error);
+    console.error('❌ Failed to publish tool:', error instanceof Error ? error.message : error);
     process.exit(1);
   }
 }

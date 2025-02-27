@@ -8,7 +8,7 @@ const CONFIG_DIR = path.join(os.homedir(), '.atm');
 const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
 
 export async function login() {
-  const loginUrl = `http://localhost:3000/api/atm/login?next=${encodeURIComponent(`http://localhost:${AUTH_PORT}`)}`;
+  const loginUrl = `https://try-synaptic.ai/api/atm/login?next=${encodeURIComponent(`http://localhost:${AUTH_PORT}`)}`;
   
   console.log('\nTo login to ATM, please visit:');
   console.log('\x1b[36m%s\x1b[0m', loginUrl); // Cyan color for URL
@@ -19,20 +19,24 @@ export async function login() {
     const accessToken = url.searchParams.get('access_token');
     const refreshToken = url.searchParams.get('refresh_token');
     const userId = url.searchParams.get('user_id');
-    const username = url.searchParams.get('username'); // Extract username from the request
+    const username = url.searchParams.get('username');
+    const supabaseUrl = url.searchParams.get('supabase_url');
+    const supabaseKey = url.searchParams.get('supabase_key');
 
-    if (accessToken && refreshToken && userId && username) { // Ensure username is present
+    if (accessToken && refreshToken && userId && username && supabaseUrl && supabaseKey) {
       // Create config directory if it doesn't exist
       if (!fs.existsSync(CONFIG_DIR)) {
         fs.mkdirSync(CONFIG_DIR, { recursive: true });
       }
 
-      // Save tokens, user_id, and username to config file
+      // Save tokens, user_id, username, and Supabase credentials to config file
       const config = {
         access_token: accessToken,
         refresh_token: refreshToken,
         user_id: userId,
-        username: username, // Save username
+        username: username,
+        supabase_url: supabaseUrl,
+        supabase_key: supabaseKey,
         updated_at: new Date().toISOString()
       };
 
@@ -61,7 +65,7 @@ export async function login() {
         <html>
           <body>
             <h1>Authentication Failed</h1>
-            <p>Missing required tokens, user_id, or username. Please try again.</p>
+            <p>Missing required authentication information. Please try again.</p>
           </body>
         </html>
       `);
@@ -69,7 +73,7 @@ export async function login() {
   });
 
   server.listen(AUTH_PORT, () => {
-    console.log(`Local server started on port ${AUTH_PORT}`);
+    // console.log(`Local server started on port ${AUTH_PORT}`);
   });
 
   // Handle server errors
