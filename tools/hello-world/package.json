@@ -5,10 +5,10 @@
   "main": "index.ts",
   "scripts": {
     "build": "atm build",
-    "publish": "atm publish"
+    "atm:publish": "atm publish"
   },
   "dependencies": {
-    "@synaptic-ai/toolmaker": "workspace:*",
+    "@synaptic-ai/toolmaker": "0.0.1",
     "zod": "^3.24.1"
   },
   "devDependencies": {
