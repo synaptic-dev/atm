@@ -120,6 +120,7 @@ export async function publishTool(toolPath: string = '.'): Promise<void> {
       .from('atm_tools')
       .select('*')
       .eq('handle', handle)
+      .eq('owner_username', username)
       .single();
 
     if (toolCheckError && toolCheckError.code !== 'PGRST116') {
@@ -143,7 +144,8 @@ export async function publishTool(toolPath: string = '.'): Promise<void> {
         name: metadata.name,
         description: metadata.description,
         owner_username: username,
-        file_path: basePath
+        file_path: basePath,
+        owner_id: userId
       }, {
         onConflict: 'handle'
       })
