@@ -1,6 +1,6 @@
 {
   "name": "@synaptic-ai/toolmaker",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Agent Tool Manager by Synaptic - easily create and manage AI Agent tools",
   "scripts": {
     "build": "tsup src/index.ts src/cli/index.ts --format cjs,esm --dts",

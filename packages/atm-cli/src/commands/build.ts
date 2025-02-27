@@ -55,7 +55,11 @@ export async function buildTool(entryFile: string = 'index.ts') {
     const toolModule = require(entryPath);
     const tool = toolModule.default;
 
-    if (!tool || !(tool instanceof Tool)) {
+    // Check if it has the expected Tool interface instead of using instanceof
+    if (!tool || 
+        typeof tool.getName !== 'function' || 
+        typeof tool.getDescription !== 'function' || 
+        typeof tool.getCapabilities !== 'function') {
       throw new Error('Entry file must export a Tool instance as default export');
     }
 
