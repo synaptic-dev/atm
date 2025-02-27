@@ -36,8 +36,9 @@ const greetCapability = new ToolCapability({
 npm install -g @synaptic-ai/atm
 ```
 
-Share your tools with the AI community:
+Build and share your tools:
 
+- **Easy Integration**: `atm build` produces a schema and runner that can be easily integrated with OpenAI SDK.
 - **Simple Publishing**: Build and publish with a few commands
 
 ```bash
