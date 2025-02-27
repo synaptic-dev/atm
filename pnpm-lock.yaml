@@ -263,8 +263,8 @@ importers:
         specifier: ^2.39.7
         version: 2.48.1
       '@synaptic-ai/toolmaker':
-        specifier: workspace:*
-        version: link:../toolmaker
+        specifier: ^0.0.1
+        version: 0.0.1
       commander:
         specifier: ^11.1.0
         version: 11.1.0
@@ -400,8 +400,8 @@ importers:
   tools/hello-world:
     dependencies:
       '@synaptic-ai/toolmaker':
-        specifier: workspace:*
-        version: link:../../packages/toolmaker
+        specifier: ^0.0.1
+        version: 0.0.1
       zod:
         specifier: ^3.24.1
         version: 3.24.1
@@ -4568,6 +4568,13 @@ packages:
     resolution: {integrity: sha512-JQ5TuMi45Owi4/BIMAJBoSQoOJu12oOk/gADqlcUL9JEdHB8vyjUSsxqeNXnmXHjYKMi2WcYtezGEEhqUI/E2g==}
     dependencies:
       tslib: 2.8.1
+    dev: false
+
+  /@synaptic-ai/toolmaker@0.0.1:
+    resolution: {integrity: sha512-lUl5ms1Le7moUEhnIIGV9SHT8G862DKyfzih9L1UDUuSg419003wsAnoXJnNhG2Lqr/tfj8maeE+4X5Uug/p1A==}
+    hasBin: true
+    dependencies:
+      zod: 3.24.1
     dev: false
 
   /@tootallnate/quickjs-emscripten@0.23.0:
