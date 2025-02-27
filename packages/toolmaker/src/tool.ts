@@ -1,37 +1,4 @@
 import { z } from 'zod';
-import { zodToJsonSchema } from 'zod-to-json-schema';
-
-type JsonSchema = {
-  type: 'function';
-  function: {
-    name: string;
-    parameters: {
-      type: string;
-      properties: Record<string, any>;
-      description?: string;
-    };
-    description: string;
-  };
-};
-
-type Schema = JsonSchema | z.ZodType;
-
-// Helper type to extract parameter types from schema
-type InferParams<T extends Schema> = T extends JsonSchema 
-  ? T['function']['parameters']['properties'] extends Record<string, { type: string }>
-    ? {
-        [K in keyof T['function']['parameters']['properties']]: T['function']['parameters']['properties'][K]['type'] extends 'string'
-          ? string
-          : T['function']['parameters']['properties'][K]['type'] extends 'number'
-          ? number
-          : T['function']['parameters']['properties'][K]['type'] extends 'boolean'
-          ? boolean
-          : any;
-      }
-    : Record<string, any>
-  : T extends z.ZodType
-    ? z.infer<T>
-    : never;
 
 export interface ToolCapabilityOptions<T extends z.ZodType> {
   name: string;
@@ -88,50 +55,3 @@ export class Tool {
 }
 
 export default Tool;
-
-// Example usage:
-/*
-import Tool from './toolmaker';
-
-// Using JSON Schema
-const jsonTool = new Tool(
-  'JSON Schema Tool',
-  'Example using JSON Schema'
-);
-
-jsonTool.addCapability(
-  'Get Answer',
-  {
-    type: 'function',
-    function: {
-      name: 'get_answer',
-      parameters: {
-        type: 'object',
-        properties: {},
-        description: 'No parameters needed'
-      },
-      description: 'Returns 42'
-    }
-  },
-  'Returns 42',
-  async () => ({ answer: 42 })
-);
-
-// Using Zod Schema
-const zodTool = new Tool(
-  'Zod Tool',
-  'Example using Zod'
-);
-
-const schema = z.object({
-  name: z.string(),
-  age: z.number()
-});
-
-zodTool.addCapability(
-  'Greet',
-  schema,
-  'Greets a person',
-  async (input) => ({ greeting: `Hello ${input.name}, you are ${input.age} years old!` })
-);
-*/ 
