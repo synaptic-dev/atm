@@ -1,6 +1,6 @@
 # @synaptic-ai/toolmaker
 
-A powerful SDK for creating and managing AI tools. Toolmaker provides a type-safe way to define tool capabilities using Zod schemas and TypeScript.
+ATM Toolmaker provides a type-safe way to define agent tools using Zod schemas and TypeScript.
 
 ## Installation
 
@@ -8,26 +8,48 @@ A powerful SDK for creating and managing AI tools. Toolmaker provides a type-saf
 npm install @synaptic-ai/toolmaker
 ```
 
-You'll also need the ATM CLI to build and publish your tools:
-
-```bash
-npm install -g @synaptic-ai/atm
-```
-
 ## Quick Start
 
-Here's a simple example of creating a tool with a greeting capability:
+### Single-Capability Tool
+
+The simplest way to create a tool with a single capability:
 
 ```typescript
-import { Tool, ToolCapability } from '@synaptic-ai/toolmaker';
 import { z } from 'zod';
+import { Tool } from '@synaptic-ai/toolmaker';
+
+// Define a single-capability tool directly
+const greetingTool = new Tool({
+  name: 'Greeting',
+  description: 'A simple greeting tool',
+  schema: z.object({
+    name: z.string().describe("Name of the person to greet")
+  }),
+  runner: async (params) => {
+    return {
+      message: `Hello, ${params.name}!`,
+      timestamp: new Date().toISOString()
+    };
+  }
+});
+
+export default greetingTool;
+```
+
+### Multi-Capability Tool
+
+For tools with multiple capabilities:
+
+```typescript
+import { z } from 'zod';
+import { Tool, ToolCapability } from '@synaptic-ai/toolmaker';
 
 // Define your input schema
 const greetSchema = z.object({
   name: z.string().describe("Name of the person to greet")
 }).describe("Parameters for greeting");
 
-// Create a capability
+// Create capability instances
 const greetCapability = new ToolCapability({
   name: 'Greet',
   description: 'Greets a person by name',
@@ -40,31 +62,62 @@ const greetCapability = new ToolCapability({
   }
 });
 
-// Create and export your tool
-const tool = new Tool({
-  name: 'Hello World',
-  description: 'A simple tool to demonstrate ATM capabilities'
+const farewellCapability = new ToolCapability({
+  name: 'Farewell',
+  description: 'Says goodbye to a person',
+  schema: greetSchema, // reusing the same schema
+  runner: async (params) => {
+    return {
+      message: `Goodbye, ${params.name}!`,
+      timestamp: new Date().toISOString()
+    };
+  }
 });
 
-tool.addCapability(greetCapability);
-export default tool;
+// Create a multi-capability tool with all capabilities
+const multiCapabilityTool = new Tool({
+  name: 'Hello World',
+  description: 'A simple tool with greeting capabilities',
+  capabilities: [greetCapability, farewellCapability]
+});
+
+export default multiCapabilityTool;
 ```
 
 ## Core Concepts
 
 ### Tool
 
-The `Tool` class is the main container for your AI tool:
+The `Tool` class is the main container for your AI tool and supports two patterns:
+
+#### Single-Capability Pattern
 
 ```typescript
-const tool = new Tool({
-  name: string;        // Display name of your tool
-  description: string; // What your tool does
+// Create a tool with a single capability
+const singleCapabilityTool = new Tool({
+  name: string,             // Display name of your tool
+  description: string,      // What your tool does
+  schema: ZodType,          // Input parameters schema
+  runner: async Function    // Function that executes the capability
+});
+```
+
+#### Multi-Capability Pattern
+
+```typescript
+// Create a tool with multiple capabilities
+const multiCapabilityTool = new Tool({
+  name: string,              // Display name of your tool
+  description: string,       // What your tool does
+  capabilities?: ToolCapability[] // Optional array of capabilities
 });
 ```
 
 Methods:
-- `addCapability(capability: ToolCapability)`: Add a new capability to your tool
+- `getCapabilities()`: Returns all capabilities of the tool
+- `getName()`: Returns the tool's name
+- `getDescription()`: Returns the tool's description
+- `openai()`: Transforms capabilities into OpenAI function format
 
 ### ToolCapability
 
@@ -72,10 +125,10 @@ Methods:
 
 ```typescript
 const capability = new ToolCapability({
-  name: string;        // Name of the capability
-  description: string; // What this capability does
-  schema: ZodType;     // Input parameters schema
-  runner: Function;    // Async function that executes the capability
+  name: string,        // Name of the capability
+  description: string, // What this capability does
+  schema: ZodType,     // Input parameters schema
+  runner: Function     // Async function that executes the capability
 });
 ```
 
@@ -84,22 +137,62 @@ Key features:
 - Automatic JSON Schema generation for AI consumption
 - Built-in TypeScript support
 
+### Toolkit
+
+The `Toolkit` class allows you to group multiple tools together:
+
+```typescript
+import { Toolkit } from '@synaptic-ai/toolmaker';
+
+const toolkit = new Toolkit({
+  tools: [tool1, tool2, tool3] // Array of Tool instances
+});
+```
+
+Methods:
+- `openai()`: Transforms all tool capabilities into OpenAI function format
+- `handler(params)`: Handles and processes tool calls from OpenAI
+- `getTools()`: Returns all tools in the toolkit
+- `addTool(tool)`: Add a new tool to the toolkit
+
+Processing tool calls:
+```typescript
+// Process a single message with tool calls
+const toolResponses = await toolkit.handler({ 
+  message: chatCompletionMessage 
+});
+
+// Or process a ChatCompletion object
+const toolResponses = await toolkit.handler({ 
+  chatCompletion: chatCompletionObject 
+});
+```
+
+## Naming Conventions
+
+When your tools are used with AI systems like OpenAI:
+
+- **Single-capability tools**: Function names are formatted as just `tool_name` in snake_case
+- **Multi-capability tools**: Function names are formatted as `tool_name-capability_name` in snake_case
+- Spaces in names are replaced with underscores
+- The handler method parses these function names to locate and execute the right capability
+
 ## Best Practices
 
-1. **Schema Design**
+1. **Tool Design**
+   - Use the single-capability pattern for simple tools with one function
+   - Use the multi-capability pattern for complex tools with multiple related functions
+   - Set all capabilities at construction time
+
+2. **Schema Design**
    - Use descriptive names for schema properties
    - Add descriptions using `.describe()` for better AI understanding
    - Keep schemas focused and single-purpose
 
-2. **Runner Implementation**
+3. **Runner Implementation**
    - Handle errors gracefully
    - Return structured data
    - Keep functions pure and side-effect free when possible
-
-3. **Tool Organization**
-   - One capability per file
-   - Group related capabilities in directories
-   - Export tools from index.ts
 
 ## Directory Structure
 
@@ -124,7 +217,11 @@ Toolmaker is written in TypeScript and provides full type definitions. You get:
 
 ## Building and Sharing
 
-Once you've created your tool, you can share it with the AI community through ATM:
+Once you've created your tool, you can share it through the ATM CLI:
+
+```bash
+npm install -g @synaptic-ai/atm
+```
 
 1. First, authenticate with ATM:
 ```bash

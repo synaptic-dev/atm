@@ -88,6 +88,21 @@ export async function buildTool(entryFile: string = 'index.ts') {
 const schema = z.object({
   ${Object.entries(schema._def.shape()).map(([key, value]: [string, any]) => {
     const description = value._def.description;
+    
+    // Handle optional fields
+    if (value._def.typeName === 'ZodOptional') {
+      const innerType = value._def.innerType._def.typeName.toLowerCase().replace('zod', '');
+      return `${key}: z.${innerType}().optional()${description ? `.describe(${JSON.stringify(description)})` : ''}`;
+    }
+    
+    // Handle default fields
+    if (value._def.typeName === 'ZodDefault') {
+      const innerType = value._def.innerType._def.typeName.toLowerCase().replace('zod', '');
+      const defaultValue = JSON.stringify(value._def.defaultValue());
+      return `${key}: z.${innerType}().default(${defaultValue})${description ? `.describe(${JSON.stringify(description)})` : ''}`;
+    }
+    
+    // Handle normal fields
     const type = value._def.typeName.toLowerCase().replace('zod', '');
     return `${key}: z.${type}()${description ? `.describe(${JSON.stringify(description)})` : ''}`;
   }).join(',\n  ')}
