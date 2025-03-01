@@ -22,7 +22,7 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.39.7",
-    "@synaptic-ai/toolmaker": "^0.0.1",
+    "@synaptic-ai/toolmaker": "workspace:*",
     "commander": "^11.1.0",
     "esbuild": "^0.20.0",
     "prettier": "^3.2.5",

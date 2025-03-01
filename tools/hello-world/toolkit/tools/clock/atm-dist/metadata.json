@@ -1,0 +1,13 @@
+{
+  "name": "Clock",
+  "handle": "clock",
+  "description": "Tool for getting current date and time information",
+  "isToolkit": false,
+  "capabilities": [
+    {
+      "key": "get-time",
+      "name": "Get Time",
+      "description": "Returns the current date and time"
+    }
+  ]
+}

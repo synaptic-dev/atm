@@ -1,0 +1,20 @@
+{
+  "name": "Clock Toolkit",
+  "handle": "clock-toolkit",
+  "description": "Toolkit containing multiple tools: Clock, Get Time",
+  "isToolkit": true,
+  "capabilities": [
+    {
+      "key": "get-time",
+      "name": "Get Time",
+      "description": "Returns the current date and time",
+      "toolName": "Clock"
+    },
+    {
+      "key": "get-time",
+      "name": "Get Time",
+      "description": "Returns the current time in New York (ET)",
+      "toolName": "Get Time"
+    }
+  ]
+}

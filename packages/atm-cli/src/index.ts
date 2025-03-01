@@ -26,8 +26,8 @@ program
 
 program
   .command('build')
-  .description('Build an ATM tool')
-  .argument('[path]', 'Path to tool entry file', 'index.ts')
+  .description('Build an ATM tool or toolkit')
+  .argument('[path]', 'Path to tool or toolkit entry file, defaults to index.ts in current directory', 'index.ts')
   .action(buildTool);
 
 program
