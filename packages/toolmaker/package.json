@@ -2,6 +2,8 @@
   "name": "@synaptic-ai/toolmaker",
   "version": "0.0.3",
   "description": "Agent Toolmaker by Synaptic - easily create and manage AI Agent tools",
+  "homepage": "https://try-synaptic.ai/atm",
+  "repository": "https://github.com/synaptic-dev/atm",
   "scripts": {
     "build": "tsup src/index.ts --format cjs,esm --dts",
     "prepublishOnly": "pnpm build"
