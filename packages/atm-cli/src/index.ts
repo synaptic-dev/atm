@@ -4,7 +4,6 @@ import { buildTool } from './commands/build';
 import { publishTool } from './commands/publish';
 import { login } from './commands/login';
 import { initTool } from './commands/init';
-import { version } from './commands/version';
 
 const program = new Command();
 
@@ -35,10 +34,5 @@ program
   .description('Publish tool to ATM registry')
   .argument('[path]', 'Path to tool directory', '.')
   .action(publishTool);
-
-program
-  .command('version')
-  .description('Show ATM CLI version')
-  .action(version);
 
 program.parse(); 
