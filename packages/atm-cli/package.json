@@ -25,6 +25,7 @@
     "@synaptic-ai/toolmaker": "workspace:*",
     "commander": "^11.1.0",
     "esbuild": "^0.20.0",
+    "ora": "6.3.1",
     "prettier": "^3.2.5",
     "tar": "^6.2.0",
     "ts-node": "^10.9.2",
@@ -34,9 +35,10 @@
   "devDependencies": {
     "@tsconfig/node-lts": "^22.0.1",
     "@types/node": "^20.11.17",
+    "@types/ora": "^3.2.0",
     "@types/prettier": "^3.0.0",
     "@types/tar": "^6.1.11",
     "tsup": "^8.3.5",
     "typescript": "^5.0.0"
   }
-} 
+}

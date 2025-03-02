@@ -2,12 +2,12 @@
   "name": "Get Time",
   "handle": "get-time",
   "description": "Returns the current time in New York (ET)",
-  "isToolkit": false,
   "capabilities": [
     {
       "key": "get-time",
       "name": "Get Time",
-      "description": "Returns the current time in New York (ET)"
+      "description": "Returns the current time in New York (ET)",
+      "toolName": "Get Time"
     }
   ]
 }

@@ -37,6 +37,17 @@ function isToolkit(obj: any): obj is ToolkitLike {
 }
 
 export async function buildTool(entryFile: string = 'index.ts') {
+  // Dynamically import ora
+  let ora;
+  try {
+    ora = (await import('ora')).default;
+  } catch (error) {
+    console.error('Failed to initialize. Please try again.');
+    process.exit(1);
+  }
+  
+  let spinner = ora('Building ATM Tool...').start();
+  
   try {
     // Register ts-node to handle TypeScript imports
     register({
@@ -49,23 +60,16 @@ export async function buildTool(entryFile: string = 'index.ts') {
 
     // Use atm-dist as the output directory
     const distDir = path.join(process.cwd(), 'atm-dist');
-    console.log('Cleaning atm-dist directory...');
+    // Silently clean and create dist directory
     removeDirectory(distDir);
-
-    // Create fresh dist directory
-    console.log('Creating fresh atm-dist directory...');
     fs.mkdirSync(distDir);
-
-    // Create capabilities directory
-    const capabilitiesDir = path.join(distDir, 'capabilities');
-    fs.mkdirSync(capabilitiesDir);
 
     // Import the module from the entry path
     const entryPath = path.resolve(process.cwd(), entryFile);
-    console.log('Loading from:', entryPath);
     
     if (!fs.existsSync(entryPath)) {
-      throw new Error(`Entry file not found: ${entryPath}`);
+      spinner.fail(`Error: Entry file not found: ${entryPath}`);
+      process.exit(1);
     }
 
     // Create a require function for the current directory
@@ -81,13 +85,11 @@ export async function buildTool(entryFile: string = 'index.ts') {
     // Determine if the export is a Tool or a Toolkit
     if (isTool(exportedItem)) {
       // It's a Tool instance
-      console.log('Detected Tool instance');
       tools = [exportedItem];
       name = exportedItem.getName();
       description = exportedItem.getDescription();
     } else if (isToolkit(exportedItem)) {
       // It's a Toolkit instance
-      console.log('Detected Toolkit instance');
       isAToolkit = true;
       tools = exportedItem.getTools();
       
@@ -101,44 +103,43 @@ export async function buildTool(entryFile: string = 'index.ts') {
         description = "A toolkit with no tools";
       }
     } else {
-      throw new Error('Entry file must export a Tool or Toolkit instance as default export');
+      spinner.fail('Error: Entry file must export a Tool or Toolkit instance as default export');
+      process.exit(1);
     }
 
-    const handle = toKebabCase(name);
     let allProcessedCapabilities: any[] = [];
+    let builtToolNames: string[] = [];
 
     // Process each tool
     for (let i = 0; i < tools.length; i++) {
       const tool = tools[i];
       const toolName = tool.getName();
-      console.log(`Processing tool: ${toolName} (${i + 1}/${tools.length})`);
+      const toolNameKey = toKebabCase(toolName);
+      builtToolNames.push(toolName);
+      
+      // Create a directory for each tool
+      const toolDir = path.join(distDir, toolNameKey);
+      if (!fs.existsSync(toolDir)) {
+        fs.mkdirSync(toolDir);
+      }
+      
+      // Create capabilities directory for this tool
+      const capabilitiesDir = path.join(toolDir, 'capabilities');
+      fs.mkdirSync(capabilitiesDir);
       
       // Process each capability
       const capabilities = tool.getCapabilities();
-      console.log(`Found ${capabilities.length} capabilities in tool ${toolName}`);
 
       const processedCapabilities = await Promise.all(capabilities.map(async (capability: ToolCapability<any>) => {
         const { name, description, schema, runner } = capability;
         const key = toKebabCase(name);
         
-        // Create a subfolder for each tool in a toolkit
-        let capabilityDirPath;
-        if (isAToolkit) {
-          const toolDir = path.join(capabilitiesDir, toKebabCase(toolName));
-          if (!fs.existsSync(toolDir)) {
-            fs.mkdirSync(toolDir);
-          }
-          capabilityDirPath = path.join(toolDir, key);
-        } else {
-          capabilityDirPath = path.join(capabilitiesDir, key);
-        }
-        
-        console.log('Processing capability:', name);
+        // Create directory for this capability
+        const capabilityDirPath = path.join(capabilitiesDir, key);
         fs.mkdirSync(capabilityDirPath);
 
         // Save schema to its own file
         const schemaPath = path.join(capabilityDirPath, 'schema.ts');
-        console.log('Saving schema to:', schemaPath);
         
         const schemaCode = `import { z } from 'zod';
 
@@ -172,7 +173,6 @@ export default schema;`;
 
         // Save runner code
         const runnerPath = path.join(capabilityDirPath, 'runner.ts');
-        console.log('Saving runner to:', runnerPath);
 
         // Get the runner function string and ensure it uses ParamsType
         const runnerStr = runner.toString();
@@ -194,35 +194,48 @@ export default ${modifiedRunner};`;
           key,
           name,
           description,
-          toolName: isAToolkit ? toolName : undefined // Include tool name if it's a toolkit
+          toolName,
+          toolPath: isAToolkit ? toolNameKey : undefined // Path to this tool's directory if it's a toolkit
         };
 
         return capabilityInfo;
       }));
 
+      // Add processed capabilities to the global list
       allProcessedCapabilities = [...allProcessedCapabilities, ...processedCapabilities];
+      
+      // Create individual tool metadata.json file
+      const toolMetadata = {
+        name: toolName,
+        handle: toolNameKey,
+        description: tool.getDescription(),
+        capabilities: processedCapabilities
+      };
+      
+      // Save individual tool metadata
+      fs.writeFileSync(
+        path.join(toolDir, 'metadata.json'),
+        JSON.stringify(toolMetadata, null, 2)
+      );
     }
 
-    // Generate metadata
-    const metadata = {
-      name,
-      handle,
-      description,
-      isToolkit: isAToolkit,
-      capabilities: allProcessedCapabilities
-    };
-
-    // Save metadata
-    fs.writeFileSync(
-      path.join(distDir, 'metadata.json'),
-      JSON.stringify(metadata, null, 2)
-    );
-
-    console.log('\nBuild completed successfully!');
-    console.log('Tool:', { name, handle, description, isToolkit: isAToolkit });
-    console.log(`Processed ${tools.length} tools with ${allProcessedCapabilities.length} total capabilities`);
+    // Show the key messages with ora
+    spinner.succeed('Build completed successfully!');
+    
+    // Show output path
+    spinner = ora('').succeed(`Output path: atm-dist`);
+    
+    // Show built tool names
+    spinner = ora('').succeed(`Built tool${builtToolNames.length > 1 ? 's' : ''}: ${builtToolNames.join(', ')}`);
+    
+    // Tell user how to publish (as a CTA without checkmark)
+    console.log('\nTo publish your tool, run: atm publish');
+    
   } catch (error: any) {
-    console.error('Build failed:', error?.message || error);
+    if (spinner) {
+      spinner.fail('Build failed');
+    }
+    console.error(error?.message || error);
     process.exit(1);
   }
 } 
