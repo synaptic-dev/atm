@@ -1,11 +1,10 @@
 {
-  "name": "hello-world-tool",
+  "name": "clock-tool",
   "version": "1.0.0",
-  "description": "A simple tool to greet people",
+  "description": "A simple tool to get the current time",
   "main": "index.ts",
   "scripts": {
-    "build": "atm build",
-    "atm:publish": "atm publish"
+    "build": "atm build"
   },
   "dependencies": {
     "@synaptic-ai/toolmaker": "workspace:*",

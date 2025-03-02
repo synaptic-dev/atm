@@ -1,7 +1,0 @@
-{
-  "name": "World Clock",
-  "handle": "world-clock",
-  "description": "A tool for getting current time in different timezones using timeapi.io",
-  "author": "SIER",
-  "version": "1.0.0"
-} 

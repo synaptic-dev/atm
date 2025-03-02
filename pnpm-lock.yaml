@@ -412,6 +412,22 @@ importers:
         specifier: 5.7.3
         version: 5.7.3
 
+  tools/clock:
+    dependencies:
+      '@synaptic-ai/toolmaker':
+        specifier: workspace:*
+        version: link:../../packages/toolmaker
+      openai:
+        specifier: ^4.86.1
+        version: 4.86.1(zod@3.24.1)
+      zod:
+        specifier: ^3.24.1
+        version: 3.24.1
+    devDependencies:
+      typescript:
+        specifier: ^5.2.2
+        version: 5.7.3
+
   tools/hello-world:
     dependencies:
       '@synaptic-ai/toolmaker':

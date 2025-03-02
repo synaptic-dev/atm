@@ -115,7 +115,7 @@ export async function buildTool(entryFile: string = 'index.ts') {
       const tool = tools[i];
       const toolName = tool.getName();
       const toolNameKey = toKebabCase(toolName);
-      builtToolNames.push(toolName);
+      builtToolNames.push(toolNameKey);
       
       // Create a directory for each tool
       const toolDir = path.join(distDir, toolNameKey);
@@ -220,7 +220,7 @@ export default ${modifiedRunner};`;
     }
 
     // Show the key messages with ora
-    spinner.succeed('Build completed successfully!');
+    spinner.succeed('Build successful!');
     
     // Show output path
     spinner = ora('').succeed(`Output path: atm-dist`);

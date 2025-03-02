@@ -223,23 +223,23 @@ export async function publishTool(toolPath: string = '.'): Promise<void> {
     // Show how many tools were found
     spinner.succeed(`Found ${toolDirs.length} tools to publish`);
     
-    // Log directly for visibility of initial tool publishing
-    const firstToolName = toolDirs[0].name;
-    console.log(`Publishing tool: ${firstToolName}`);
-    
-    // Create a new spinner for uploading
-    spinner = ora('').start();
-
-    // Upload the entire dist directory contents silently (done in the background)
-    const basePath = await uploadDirectory(config, userId, toolDirs[0].name, distPath);
-    
-    if (!basePath) {
-      spinner.fail('Upload failed. Please login first using: atm login');
-      process.exit(1);
-    }
-
     // Process each tool
     for (const toolDir of toolDirs) {
+      // Log directly for visibility of tool publishing
+      console.log(`Publishing tool: ${toolDir.name}`);
+      
+      // Create a new spinner for uploading
+      spinner = ora('').start();
+
+      // Upload this tool's directory contents silently
+      const basePath = await uploadDirectory(config, userId, toolDir.name, distPath);
+      
+      if (!basePath) {
+        spinner.fail(`Upload failed for tool: ${toolDir.name}`);
+        console.error('Please login first using: atm login');
+        process.exit(1);
+      }
+
       let toolMetadata, toolMetadataPath;
       try {
         const toolDirPath = path.join(distPath, toolDir.name);
@@ -256,13 +256,6 @@ export async function publishTool(toolPath: string = '.'): Promise<void> {
       
       const { handle, name, description } = toolMetadata;
       
-      // Update spinner text for subsequent tools
-      if (toolDir !== toolDirs[0]) {
-        spinner = ora('').stop();
-        console.log(`Publishing tool: ${name}`);
-        spinner = ora('').start();
-      }
-
       // Check if tool exists and belongs to the user
       try {
         const { data: existingTool, error: toolCheckError } = await supabase
