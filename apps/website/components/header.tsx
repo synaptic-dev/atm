@@ -28,7 +28,7 @@ export function Header() {
             Browse
           </Link>
           <a 
-            href="https://github.com/synaptic-dev/atm"
+            href="https://docs.try-synaptic.ai/atm"
             target="_blank"
             rel="noopener noreferrer"
             className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"

@@ -34,7 +34,7 @@ export default async function Home() {
               <ArrowRight className="h-4 w-4" />
             </Button>
           </Link>
-          <a href="https://github.com/synaptic-dev/atm" target="_blank" rel="noopener noreferrer">
+          <a href="https://docs.try-synaptic.ai/atm" target="_blank" rel="noopener noreferrer">
             <Button variant="outline" size="lg">
               Read Documentation
             </Button>
