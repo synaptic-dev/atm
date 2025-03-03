@@ -1,11 +1,11 @@
-import { ToolCapability } from '@synaptic-ai/toolmaker';
+import { Tool } from '@synaptic-ai/toolmaker';
 import { z } from 'zod';
 
 const timeSchema = z.object({
   timezone: z.string().optional().describe("Optional timezone (defaults to local timezone)")
 });
 
-export const getTime = new ToolCapability({
+export const getTime = new Tool({
   name: 'Get Time',
   description: 'Returns the current date and time',
   schema: timeSchema,

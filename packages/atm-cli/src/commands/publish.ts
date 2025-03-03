@@ -235,7 +235,7 @@ export async function publishTool(toolPath: string = '.'): Promise<void> {
       const basePath = await uploadDirectory(config, userId, toolDir.name, distPath);
       
       if (!basePath) {
-        spinner.fail(`Upload failed for tool: ${toolDir.name}`);
+        spinner.fail(`Failed to publish tool: ${toolDir.name}`);
         console.error('Please login first using: atm login');
         process.exit(1);
       }
