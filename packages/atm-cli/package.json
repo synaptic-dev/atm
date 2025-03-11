@@ -26,10 +26,10 @@
     "commander": "^11.1.0",
     "esbuild": "^0.20.0",
     "fs-extra": "^11.3.0",
-    "node-fetch": "^3.3.2",
+    "node-fetch": "2",
     "ora": "6.3.1",
     "prettier": "^3.2.5",
-    "tar": "^6.2.0",
+    "tar": "^6.2.1",
     "ts-node": "^10.9.2",
     "zod": "^3.24.1",
     "zod-to-json-schema": "3.24.2"
@@ -38,9 +38,10 @@
     "@tsconfig/node-lts": "^22.0.1",
     "@types/fs-extra": "^11.0.4",
     "@types/node": "^20.11.17",
+    "@types/node-fetch": "^2.6.12",
     "@types/ora": "^3.2.0",
     "@types/prettier": "^3.0.0",
-    "@types/tar": "^6.1.11",
+    "@types/tar": "^6.1.13",
     "tsup": "^8.3.5",
     "typescript": "^5.0.0"
   }

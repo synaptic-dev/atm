@@ -1,0 +1,10 @@
+{
+  "name": "@tools/clock",
+  "version": "0.1.0",
+  "description": "Multi-capability clock tool",
+  "main": "index.ts",
+  "dependencies": {
+    "@synaptic-ai/toolmaker": "workspace:*",
+    "zod": "^3.22.4"
+  }
+} 
