@@ -8,7 +8,7 @@ const CONFIG_DIR = path.join(os.homedir(), '.atm');
 const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
 
 export async function login() {
-  const loginUrl = `https://try-synaptic.ai/api/atm/login?next=${encodeURIComponent(`http://localhost:${AUTH_PORT}`)}`;
+  const loginUrl = `http://localhost:4200/api/atm/login?next=${encodeURIComponent(`http://localhost:${AUTH_PORT}`)}`;
   
   console.log('\nTo login to ATM, please visit:');
   console.log('\x1b[36m%s\x1b[0m', loginUrl); // Cyan color for URL

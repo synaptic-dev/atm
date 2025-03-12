@@ -26,7 +26,7 @@ function getConfig(): Config {
 }
 
 // Upload a tool as a tarball to the API
-async function uploadToolTarball(userId: string, toolName: string, targetDir: string, spinner: any): Promise<boolean> {
+async function uploadToolTarball(userId: string, toolName: string, targetDir: string, accessToken: string, spinner: any): Promise<boolean> {
   const tarballPath = path.join(os.tmpdir(), `${toolName}.tar.gz`);
   
   try {
@@ -48,7 +48,8 @@ async function uploadToolTarball(userId: string, toolName: string, targetDir: st
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-gzip',
-        'Tool-Name': toolName
+        'Tool-Name': toolName,
+        'Authorization': `Bearer ${accessToken}`
       },
       body: fileContent
     });
@@ -99,25 +100,34 @@ export async function publishTool(options: PublishOptions = {}): Promise<void> {
       process.exit(1);
     }
     
+    // Get config information
+    let config;
+    try {
+      config = getConfig();
+    } catch (error) {
+      spinner.fail('Failed to load configuration');
+      console.error('Authentication failed or expired. Please login again:');
+      console.error('Run: atm login');
+      process.exit(1);
+    }
+    
     // Get user ID from options or config
     let userId = options.userid;
     if (!userId) {
-      try {
-        const config = getConfig();
+      if (config && config.user_id) {
         userId = config.user_id;
-      } catch (error) {
-        // If no userid provided and no config, fail
-        if (!userId) {
-          spinner.fail('User ID is required');
-          console.error('Please provide a user ID with --userid or login using: atm login');
-          process.exit(1);
-        }
+      } else {
+        spinner.fail('User ID is required');
+        console.error('Please provide a user ID with --userid or login using: atm login');
+        process.exit(1);
       }
     }
     
-    if (!userId) {
-      spinner.fail('User ID is required');
-      console.error('Please provide a user ID with --userid option');
+    // Get access token from config
+    const accessToken = config.access_token;
+    if (!accessToken) {
+      spinner.fail('Access token is required');
+      console.error('Please login using: atm login');
       process.exit(1);
     }
 
@@ -157,7 +167,7 @@ export async function publishTool(options: PublishOptions = {}): Promise<void> {
       spinner = ora('').start();
 
       // Upload the tool file as a tarball
-      const success = await uploadToolTarball(userId, toolName, targetPath, spinner);
+      const success = await uploadToolTarball(userId, toolName, targetPath, accessToken, spinner);
       
       if (!success) {
         spinner.fail(`Failed to publish tool: ${toolName}`);
