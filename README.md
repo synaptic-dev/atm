@@ -80,3 +80,27 @@ atm publish
 ## License
 
 MIT
+
+## TODO
+
+### Website
+- [ ] Set up the Next.js frontend project structure.
+- [ ] Implement the homepage with an overview of available tools.
+- [ ] Define clear API contract for tool listing and publishing.
+- [ ] Integrate cloud-based execution via Synaptic.
+- [ ] Implement execution history and performance analytics.
+- [ ] Ensure seamless browser-based authentication for CLI.
+- [ ] Streamline the tool creation and publishing process.
+- [ ] Provide comprehensive documentation and examples.
+- [ ] Set up automated testing for frontend and CLI.
+- [ ] Implement continuous integration and deployment pipelines.
+
+### CLI
+- [ ] Ensure the `atm login` command works seamlessly with browser-based authentication.
+- [ ] Enhance CLI to support complex tool creation scenarios.
+- [ ] Improve error handling and validation during the build process.
+- [ ] Streamline the `atm build` and `atm publish` commands.
+- [ ] Expand documentation with more examples and troubleshooting guides.
+- [ ] Provide templates or scaffolding commands for quicker tool setup.
+- [ ] Set up automated testing for CLI.
+- [ ] Implement continuous integration and deployment pipelines.
