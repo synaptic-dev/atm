@@ -32,7 +32,7 @@ program
 program
   .command('publish')
   .description('Publish tool to ATM registry')
-  .option('-t, --target <path>', 'Path to tool directory to publish', 'tool-dist')
+  .option('-t, --target <path>', 'Path to tool directory to publish', 'atm-dist')
   .option('-u, --userid <id>', 'User ID for publishing the tool')
   .action(publishTool);
 

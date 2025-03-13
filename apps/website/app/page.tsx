@@ -1,9 +1,9 @@
 import { Button } from '@/components/ui/button'
 import { ArrowRight } from 'lucide-react'
 import Link from "next/link"
-import { ToolGrid } from '@/components/tool-grid'
+import { ToolGrid } from '@/components/shared/tool-grid'
 import { getTools } from '@/lib/supabase/tools'
-import { CodeBlock } from '@/components/CodeBlock'
+import { CodeBlock } from '@/components/shared/code-block'
 
 // Revalidate the page every hour
 export const revalidate = 3600;

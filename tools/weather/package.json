@@ -1,0 +1,24 @@
+{
+  "name": "weather-tool",
+  "version": "1.0.0",
+  "description": "A tool for retrieving weather information for any location",
+  "main": "index.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "@synaptic-ai/toolmaker": "^0.0.4",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "keywords": [
+    "weather",
+    "api",
+    "tool",
+    "ai"
+  ],
+  "author": "",
+  "license": "MIT"
+} 

@@ -6,6 +6,7 @@ import tar from 'tar';
 import fetch from 'node-fetch';
 
 interface Config {
+  refresh_token: string;
   access_token: string;
   user_id: string;
   username: string;
@@ -25,8 +26,35 @@ function getConfig(): Config {
   return JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf-8'));
 }
 
+// Helper function to find all tool files recursively
+function findToolFiles(directory: string): { path: string, name: string }[] {
+  const result: { path: string, name: string }[] = [];
+  
+  // Get all entries in the directory
+  const entries = fs.readdirSync(directory, { withFileTypes: true });
+  
+  // Process each entry
+  for (const entry of entries) {
+    const entryPath = path.join(directory, entry.name);
+    
+    if (entry.isDirectory()) {
+      // Recursively process subdirectories
+      const subDirTools = findToolFiles(entryPath);
+      result.push(...subDirTools);
+    } else if (entry.name.endsWith('.ts')) {
+      // Add TypeScript files to the result
+      result.push({ 
+        path: entryPath,
+        name: entry.name.slice(0, -3) // Remove .ts extension
+      });
+    }
+  }
+  
+  return result;
+}
+
 // Upload a tool as a tarball to the API
-async function uploadToolTarball(userId: string, toolName: string, targetDir: string, accessToken: string, spinner: any): Promise<boolean> {
+async function uploadToolTarball(userId: string, toolName: string, targetDir: string, accessToken: string, refreshToken: string, spinner: any): Promise<boolean> {
   const tarballPath = path.join(os.tmpdir(), `${toolName}.tar.gz`);
   
   try {
@@ -44,12 +72,12 @@ async function uploadToolTarball(userId: string, toolName: string, targetDir: st
     const fileContent = fs.readFileSync(tarballPath);
     
     spinner.text = `Uploading ${toolName} to API...`;
-    const response = await fetch(`http://localhost:8787/upload?userId=${encodeURIComponent(userId)}`, {
+    const response = await fetch(`http://localhost:8787/upload?userId=${encodeURIComponent(userId)}&refreshToken=${encodeURIComponent(refreshToken)}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-gzip',
         'Tool-Name': toolName,
-        'Authorization': `Bearer ${accessToken}`
+        'Authorization': `Bearer ${accessToken}`,
       },
       body: fileContent
     });
@@ -90,7 +118,7 @@ export async function publishTool(options: PublishOptions = {}): Promise<void> {
   
   try {
     // Get the target directory
-    const targetDir = options.target || 'tool-dist';
+    const targetDir = options.target || 'atm-dist';
     const targetPath = path.resolve(process.cwd(), targetDir);
     
     // Check if target directory exists
@@ -104,6 +132,7 @@ export async function publishTool(options: PublishOptions = {}): Promise<void> {
     let config;
     try {
       config = getConfig();
+      console.log('config', config)
     } catch (error) {
       spinner.fail('Failed to load configuration');
       console.error('Authentication failed or expired. Please login again:');
@@ -125,30 +154,26 @@ export async function publishTool(options: PublishOptions = {}): Promise<void> {
     
     // Get access token from config
     const accessToken = config.access_token;
+    const refreshToken = config.refresh_token;
     if (!accessToken) {
       spinner.fail('Access token is required');
       console.error('Please login using: atm login');
       process.exit(1);
     }
 
-    // Find all tool files in target directory
-    let entries;
+    // Find all tool files in target directory and its subdirectories
+    let toolFiles;
     try {
-      entries = fs.readdirSync(targetPath, { withFileTypes: true });
+      toolFiles = findToolFiles(targetPath);
     } catch (error) {
       spinner.fail('Failed to read directory contents');
       console.error(`Error reading ${targetDir} directory:`, error);
       process.exit(1);
     }
     
-    // Look for TypeScript files (each file is a tool)
-    const toolFiles = entries.filter(entry => 
-      !entry.isDirectory() && entry.name.endsWith('.ts')
-    );
-
     if (toolFiles.length === 0) {
       spinner.fail('No tools found');
-      console.error(`No tool files found in ${targetDir}`);
+      console.error(`No tool files found in ${targetDir} or its subdirectories`);
       process.exit(1);
     }
 
@@ -157,17 +182,18 @@ export async function publishTool(options: PublishOptions = {}): Promise<void> {
     
     // Process each tool
     for (const toolFile of toolFiles) {
-      // Extract tool name from filename (remove .ts extension)
-      const toolName = toolFile.name.slice(0, -3);
+      // Extract tool name from path
+      const toolName = toolFile.name;
+      const toolPath = path.dirname(toolFile.path);
       
       // Log directly for visibility of tool publishing
-      console.log(`Publishing tool: ${toolName}`);
+      console.log(`Publishing tool: ${toolName} from ${toolPath}`);
       
       // Create a new spinner for uploading
       spinner = ora('').start();
 
       // Upload the tool file as a tarball
-      const success = await uploadToolTarball(userId, toolName, targetPath, accessToken, spinner);
+      const success = await uploadToolTarball(userId, toolName, toolPath, accessToken, refreshToken, spinner);
       
       if (!success) {
         spinner.fail(`Failed to publish tool: ${toolName}`);

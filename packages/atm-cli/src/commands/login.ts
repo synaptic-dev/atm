@@ -10,7 +10,7 @@ const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
 export async function login() {
   const loginUrl = `http://localhost:4200/api/atm/login?next=${encodeURIComponent(`http://localhost:${AUTH_PORT}`)}`;
   
-  console.log('\nTo login to ATM, please visit:');
+  console.log('\nTo login to ATM, please visit xxxx:');
   console.log('\x1b[36m%s\x1b[0m', loginUrl); // Cyan color for URL
   console.log('\nWaiting for authentication...');
 
@@ -49,16 +49,21 @@ export async function login() {
           <body>
             <h1>Authentication Successful!</h1>
             <p>You can now close this window and return to the terminal.</p>
-            <script>window.close()</script>
+            <p>access_token: ${accessToken}</p>
+            <p>refresh_token: ${refreshToken}</p>
+            <p>user_id: ${userId}</p>
+            <p>username: ${username}</p>
+            <p>supabase_url: ${supabaseUrl}</p>
+            <p>supabase_key: ${supabaseKey}</p>
           </body>
         </html>
       `);
 
       // Close server after successful authentication
-      server.close(() => {
-        console.log('\n✨ Authentication successful! You can now use ATM commands.');
-        process.exit(0);
-      });
+      // server.close(() => {
+      //   console.log('\n✨ Authentication successful! You can now use ATM commands.');
+      //   process.exit(0);
+      // });
     } else {
       res.writeHead(400, { 'Content-Type': 'text/html' });
       res.end(`

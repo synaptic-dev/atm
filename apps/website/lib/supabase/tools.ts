@@ -1,46 +1,70 @@
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
-
-const SUPABASE_URL = 'https://hnibcchiknipqongruty.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhuaWJjY2hpa25pcHFvbmdydXR5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzE4NDA3MTksImV4cCI6MjA0NzQxNjcxOX0.ocOf570HeHOoc8ZgKyXeLAJEO90BJ-yQfnPtgBiINKs';
-
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+import { supabase } from './client';
 
 export interface Tool {
-  id: string;
+  id: number;
   name: string;
-  handle: string;
+  tool_handle: string;
+  owner_id: string;
   owner_username: string;
-  description: string;
-  file_path: string;
+  description: string | null;
+  type: string;
   created_at: string;
   capabilities: Capability[];
 }
 
 export interface Capability {
-  id: string;
-  tool_id: string;
+  id: number;
+  tool_id: number | null;
   name: string;
   description: string;
-  key: string;
-  schema: string;
-  runner: string;
+  created_at: string;
+  key?: string;
+  schema?: string;
+  runner?: string;
 }
 
-async function downloadFileContent(supabase: SupabaseClient, path: string): Promise<string> {
+// Fetch capability content from HTTP endpoint
+async function fetchCapabilityContent(ownerid: string, toolName: string, capName: string): Promise<{ schema: string, runner: string }> {
   try {
-    const { data, error } = await supabase.storage
-      .from('atm_tools')
-      .download(path);
-
-    if (error) {
-      console.error('Error downloading file:', path, error);
-      return '';
+    // Normalize names for URL
+    const normalizedToolName = toolName.toLowerCase().replace(/\s+/g, '-');
+    const normalizedCapName = capName.toLowerCase().replace(/\s+/g, '-');
+    
+    // Construct the URL to the single file
+    const apiUrl = process.env.NEXT_PUBLIC_COOPER_API || 'http://localhost:8787';
+    const url = `${apiUrl}/${ownerid}/${normalizedToolName}-${normalizedCapName}`;
+    
+    console.log(`Fetching capability content from: ${url}`);
+    
+    // Fetch the file content with no cache to ensure fresh content during debugging
+    const response = await fetch(url, { 
+      cache: 'no-store',
+      next: { revalidate: 0 } 
+    });
+    
+    if (response.ok) {
+      // Get the content as text
+      const content = await response.text();
+      console.log(`Successfully fetched content (${content.length} bytes)`);
+      
+      // Use the content for both schema and runner with a prefix to identify source
+      return { 
+        schema: `// Fetched from API (${url})\n${content}`,
+        runner: `// Fetched from API (${url})\n${content}`
+      };
+    } else {
+      console.error(`Failed to fetch capability content: ${response.status} ${response.statusText} from ${url}`);
+      return { 
+        schema: `// Capability content not available - API returned ${response.status}\n// URL attempted: ${url}`,
+        runner: `// Capability content not available - API returned ${response.status}\n// URL attempted: ${url}`
+      };
     }
-
-    return await data.text();
   } catch (error) {
-    console.error('Error downloading file:', path, error);
-    return '';
+    console.error('Error fetching capability content:', error);
+    return { 
+      schema: `// Error loading capability content: ${error instanceof Error ? error.message : 'Unknown error'}\n// This is a fallback message to ensure something displays.`,
+      runner: `// Error loading capability content: ${error instanceof Error ? error.message : 'Unknown error'}\n// This is a fallback message to ensure something displays.`
+    };
   }
 }
 
@@ -68,9 +92,12 @@ export async function getTools(limit?: number, search?: string): Promise<Tool[]>
       return [];
     }
 
+    console.log('tools', tools)
+
     // Fetch capabilities for each tool
     const toolsWithData = await Promise.all(
       tools.map(async (tool) => {
+        console.log('tool', typeof tool.id)
         // Get capabilities
         const { data: capabilities, error: capsError } = await supabase
           .from('atm_tool_capabilities')
@@ -78,20 +105,23 @@ export async function getTools(limit?: number, search?: string): Promise<Tool[]>
           .eq('tool_id', tool.id);
 
         if (capsError) {
-          console.error(`Error fetching capabilities for tool ${tool.handle}:`, capsError);
+          console.error(`Error fetching capabilities for tool ${tool.tool_handle}:`, capsError);
           return null;
         }
+
+        console.log('cap', capabilities)
 
         return {
           id: tool.id,
           name: tool.name,
-          handle: tool.handle,
+          tool_handle: tool.tool_handle,
+          owner_id: tool.owner_id,
           owner_username: tool.owner_username,
           description: tool.description,
-          file_path: tool.file_path,
+          type: tool.type,
           created_at: tool.created_at,
           capabilities: capabilities || []
-        };
+        } as Tool;
       })
     );
 
@@ -104,6 +134,8 @@ export async function getTools(limit?: number, search?: string): Promise<Tool[]>
 }
 
 export async function getTool(username: string, handle: string): Promise<Tool | null> {
+  console.log(`Fetching tool: ${username}/${handle}`);
+  
   try {
     // Fetch tool metadata using the username and handle with explicit field selection
     const { data: tool, error: toolError } = await supabase
@@ -111,14 +143,15 @@ export async function getTool(username: string, handle: string): Promise<Tool | 
       .select(`
         id,
         name,
-        handle,
+        tool_handle,
+        owner_id,
         owner_username,
         description,
-        file_path,
+        type,
         created_at
       `)
       .eq('owner_username', username)
-      .eq('handle', handle)
+      .eq('tool_handle', handle)
       .single();
 
     if (toolError || !tool) {
@@ -126,7 +159,18 @@ export async function getTool(username: string, handle: string): Promise<Tool | 
       return null;
     }
 
-    // Fetch tool capabilities
+    console.log(`Found tool: ${tool.name} (ID: ${tool.id})`);
+
+    // For single-capability tools, skip capability fetching
+    if (tool.type === 'single-capability') {
+      console.log('Single capability tool - skipping capability fetching');
+      return {
+        ...tool,
+        capabilities: []
+      } as Tool;
+    }
+
+    // Fetch tool capabilities for multi-capability tools
     const { data: capabilities, error: capsError } = await supabase
       .from('atm_tool_capabilities')
       .select('*')
@@ -137,31 +181,59 @@ export async function getTool(username: string, handle: string): Promise<Tool | 
       return null;
     }
 
-    // Get capability files
+    console.log(`Found ${capabilities?.length || 0} capabilities for tool`);
+    
+    // If no capabilities, return tool with empty capabilities array
+    if (!capabilities || capabilities.length === 0) {
+      console.log('No capabilities found for this tool');
+      return {
+        ...tool,
+        capabilities: []
+      } as Tool;
+    }
+
+    // Get capability files for each capability
+    console.log('Fetching capability content...');
     const capabilitiesWithFiles = await Promise.all(
-      (capabilities || []).map(async (cap) => {
-        // Construct paths for schema and runner files
-        const schemaPath = `${tool.file_path}/capabilities/${cap.key}/schema.ts`;
-        const runnerPath = `${tool.file_path}/capabilities/${cap.key}/runner.ts`;
+      capabilities.map(async (cap) => {
+        console.log(`Processing capability: ${cap.name} (ID: ${cap.id})`);
+        
+        // Generate a key for the capability based on its name
+        const key = cap.name.toLowerCase().replace(/\s+/g, '-');
+        
+        try {
+          // Fetch capability content from the HTTP endpoint
+          const { schema, runner } = await fetchCapabilityContent(
+            tool.owner_id,
+            tool.name,
+            cap.name
+          );
 
-        // Download both files using Supabase storage API
-        const [schema, runner] = await Promise.all([
-          downloadFileContent(supabase, schemaPath),
-          downloadFileContent(supabase, runnerPath)
-        ]);
-
-        return {
-          ...cap,
-          schema,
-          runner
-        };
+          return {
+            ...cap,
+            key,
+            schema,
+            runner
+          };
+        } catch (error) {
+          console.error(`Error processing capability ${cap.name}:`, error);
+          // Return capability with error messages
+          return {
+            ...cap,
+            key,
+            schema: `// Error processing capability: ${error instanceof Error ? error.message : 'Unknown error'}`,
+            runner: `// Error processing capability: ${error instanceof Error ? error.message : 'Unknown error'}`
+          };
+        }
       })
     );
 
+    console.log('Successfully processed all capabilities');
+    
     return {
       ...tool,
       capabilities: capabilitiesWithFiles
-    };
+    } as Tool;
   } catch (error) {
     console.error('Error fetching tool:', error);
     return null;

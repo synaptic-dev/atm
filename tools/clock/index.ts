@@ -22,30 +22,6 @@ const countdownSchema = z.object({
 export const getTime = new ToolCapability({
   name: 'Get Time',
   description: 'Returns the current time, optionally in a specific timezone',
-  schema: timeSchema,
-  runner: async (params) => {
-    // Get current time
-    const now = new Date();
-    
-    let formattedTime;
-    try {
-      // Format with timezone if provided
-      if (params.timezone) {
-        formattedTime = now.toLocaleTimeString('en-US', { timeZone: params.timezone });
-      } else {
-        formattedTime = now.toLocaleTimeString();
-      }
-    } catch (error) {
-      // Fallback if timezone is invalid
-      formattedTime = now.toLocaleTimeString();
-    }
-    
-    return {
-      time: formattedTime,
-      timezone: params.timezone || 'local',
-      timestamp: now.getTime()
-    };
-  }
 });
 
 // Date capability
@@ -154,9 +130,32 @@ export const getCountdown = new ToolCapability({
 
 // Multi-capability clock tool
 const clock = new Tool({
-  name: 'Clock',
-  description: 'A multi-capability tool for time-related operations',
-  capabilities: [getTime, getDate, getCountdown]
+  name: 'Clock Single Cap',
+  description: 'A single-capability tool for time-related operations',
+  schema: timeSchema,
+  runner: async (params) => {
+    // Get current time
+    const now = new Date();
+    
+    let formattedTime;
+    try {
+      // Format with timezone if provided
+      if (params.timezone) {
+        formattedTime = now.toLocaleTimeString('en-US', { timeZone: params.timezone });
+      } else {
+        formattedTime = now.toLocaleTimeString();
+      }
+    } catch (error) {
+      // Fallback if timezone is invalid
+      formattedTime = now.toLocaleTimeString();
+    }
+    
+    return {
+      time: formattedTime,
+      timezone: params.timezone || 'local',
+      timestamp: now.getTime()
+    };
+  }
 });
 
 export default clock; 

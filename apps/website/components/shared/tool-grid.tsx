@@ -15,7 +15,7 @@ export function ToolGrid({ tools, limit }: ToolGridProps) {
       {displayTools.map((tool: Tool) => (
         <Link 
           key={tool.id} 
-          href={`/tools/${tool.owner_username}/${tool.handle}`}
+          href={`/tools/${tool.owner_username}/${tool.tool_handle}`}
           prefetch={true}
           className="block h-full"
         >
