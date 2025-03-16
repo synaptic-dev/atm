@@ -1,11 +1,11 @@
-# ATM By Synaptic
+# OpenKit 
 
-ATM is a platform for creating, sharing, and discovering tools for your AI agents. It consists of three main components:
+OpenKit is a platform for creating, sharing, and discovering tools for your AI agents. It consists of three main components:
 
 ## 🛠️ Agent Tool Maker
 
 ```bash
-npm install @synaptic-ai/toolmaker
+npm install @opkt/toolmaker
 ```
 
 Create powerful AI tools with type safety and ease:
@@ -14,7 +14,7 @@ Create powerful AI tools with type safety and ease:
 - **Capability-based Design**: Define clear inputs and outputs for AI consumption
 
 ```typescript
-import { Tool, ToolCapability } from '@synaptic-ai/toolmaker';
+import { Tool, ToolCapability } from '@opkt/toolmaker';
 import { z } from 'zod';
 
 // Define a capability with type-safe schema
@@ -33,23 +33,23 @@ const greetCapability = new ToolCapability({
 ## 📦 Agent Tool Manager
 
 ```bash
-npm install -g @synaptic-ai/atm
+npm install -g @opkt/cli
 ```
 
 Build and share your tools:
 
-- **Easy Integration**: `atm build` produces a schema and runner that can be easily integrated with OpenAI SDK.
+- **Easy Integration**: `openkit build` produces a schema and runner that can be easily integrated with OpenAI SDK.
 - **Simple Publishing**: Build and publish with a few commands
 
 ```bash
 # Build and publish your tool
-atm build
-atm publish
+openkit build
+openkit publish
 ```
 
 ## 🏪 Agent Tool Marketplace
 
-Visit [try-synaptic.ai/atm](https://try-synaptic.ai/atm)
+Visit [try-synaptic.ai/openkit](https://try-synaptic.ai/openkit)
 
 Discover and use tools built by the community:
 
@@ -60,21 +60,21 @@ Discover and use tools built by the community:
 1. Install the required packages:
 ```bash
 # Install the CLI globally
-npm install -g @synaptic-ai/atm
+npm install -g @opkt/cli
 
 # Install the toolmaker in your project
-npm install @synaptic-ai/toolmaker
+npm install @opkt/toolmaker
 ```
 
 2. Create a new tool:
 ```bash
-atm init
+openkit init
 ```
 
 3. Build and publish:
 ```bash
-atm build
-atm publish
+openkit build
+openkit publish
 ```
 
 ## License
@@ -96,10 +96,10 @@ MIT
 - [ ] Implement continuous integration and deployment pipelines.
 
 ### CLI
-- [ ] Ensure the `atm login` command works seamlessly with browser-based authentication.
+- [ ] Ensure the `openkit login` command works seamlessly with browser-based authentication.
 - [ ] Enhance CLI to support complex tool creation scenarios.
 - [ ] Improve error handling and validation during the build process.
-- [ ] Streamline the `atm build` and `atm publish` commands.
+- [ ] Streamline the `openkit build` and `openkit publish` commands.
 - [ ] Expand documentation with more examples and troubleshooting guides.
 - [ ] Provide templates or scaffolding commands for quicker tool setup.
 - [ ] Set up automated testing for CLI.

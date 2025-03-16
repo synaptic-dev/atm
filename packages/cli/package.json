@@ -1,0 +1,48 @@
+{
+  "name": "@opkt/cli",
+  "version": "0.0.8",
+  "description": "OpenKit - Build and share your awesome AI Agent tools",
+  "scripts": {
+    "build": "tsup src/index.ts src/commands/*.ts --format cjs,esm --dts --clean",
+    "postbuild": "chmod +x dist/index.js"
+  },
+  "author": "Synaptic",
+  "license": "MIT",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "openkit": "./dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.7",
+    "@opkt/toolmaker": "workspace:*",
+    "commander": "^11.1.0",
+    "esbuild": "^0.20.0",
+    "fs-extra": "^11.3.0",
+    "node-fetch": "2",
+    "ora": "6.3.1",
+    "prettier": "^3.2.5",
+    "tar": "^6.2.1",
+    "ts-node": "^10.9.2",
+    "zod": "^3.24.1",
+    "zod-to-json-schema": "3.24.2"
+  },
+  "devDependencies": {
+    "@tsconfig/node-lts": "^22.0.1",
+    "@types/fs-extra": "^11.0.4",
+    "@types/node": "^20.11.17",
+    "@types/node-fetch": "^2.6.12",
+    "@types/ora": "^3.2.0",
+    "@types/prettier": "^3.0.0",
+    "@types/tar": "^6.1.13",
+    "tsup": "^8.3.5",
+    "typescript": "^5.0.0"
+  }
+}

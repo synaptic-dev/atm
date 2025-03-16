@@ -1,9 +1,9 @@
 {
-  "name": "@synaptic-ai/toolmaker",
+  "name": "@opkt/toolmaker",
   "version": "0.0.4",
-  "description": "Agent Toolmaker by Synaptic - easily create and manage AI Agent tools",
-  "homepage": "https://try-synaptic.ai/atm",
-  "repository": "https://github.com/synaptic-dev/atm",
+  "description": "OpenKit Toolmaker - easily create and manage AI Agent tools",
+  "homepage": "https://openkit.fun",
+  "repository": "https://github.com/synaptic-dev/openkit",
   "scripts": {
     "build": "tsup src/index.ts --format cjs,esm --dts",
     "prepublishOnly": "pnpm build"

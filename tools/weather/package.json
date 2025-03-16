@@ -7,7 +7,7 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
-    "@synaptic-ai/toolmaker": "^0.0.4",
+    "@opkt/toolmaker": "workspace:*",
     "zod": "^3.22.4"
   },
   "devDependencies": {

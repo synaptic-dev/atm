@@ -4,11 +4,11 @@
   "description": "A simple tool to greet people",
   "main": "index.ts",
   "scripts": {
-    "build": "atm build",
-    "publish": "atm publish"
+    "build": "openkit build",
+    "publish": "openkit publish"
   },
   "dependencies": {
-    "@synaptic-ai/atm": "^1.0.0",
+    "@opkt/cli": "^1.0.0",
     "zod": "^3.24.1"
   },
   "devDependencies": {

@@ -1,11 +1,11 @@
-# @synaptic-ai/toolmaker
+# @opkt/toolmaker
 
-ATM Toolmaker provides a type-safe way to define agent tools using Zod schemas and TypeScript.
+OpenKit Toolmaker provides a type-safe way to define agent tools using Zod schemas and TypeScript.
 
 ## Installation
 
 ```bash
-npm install @synaptic-ai/toolmaker
+npm install @opkt/toolmaker
 ```
 
 ## Quick Start
@@ -16,7 +16,7 @@ The simplest way to create a tool with a single capability:
 
 ```typescript
 import { z } from 'zod';
-import { Tool } from '@synaptic-ai/toolmaker';
+import { Tool } from '@opkt/toolmaker';
 
 // Define a single-capability tool directly
 const greetingTool = new Tool({
@@ -42,7 +42,7 @@ For tools with multiple capabilities:
 
 ```typescript
 import { z } from 'zod';
-import { Tool, ToolCapability } from '@synaptic-ai/toolmaker';
+import { Tool, ToolCapability } from '@opkt/toolmaker';
 
 // Define your input schema
 const greetSchema = z.object({
@@ -142,7 +142,7 @@ Key features:
 The `Toolkit` class allows you to group multiple tools together:
 
 ```typescript
-import { Toolkit } from '@synaptic-ai/toolmaker';
+import { Toolkit } from '@opkt/toolmaker';
 
 const toolkit = new Toolkit({
   tools: [tool1, tool2, tool3] // Array of Tool instances
@@ -217,28 +217,28 @@ Toolmaker is written in TypeScript and provides full type definitions. You get:
 
 ## Building and Sharing
 
-Once you've created your tool, you can share it through the ATM CLI:
+Once you've created your tool, you can share it through the OpenKit CLI:
 
 ```bash
-npm install -g @synaptic-ai/atm
+npm install -g @opkt/cli
 ```
 
-1. First, authenticate with ATM:
+1. First, authenticate with OpenKit:
 ```bash
-atm login
+openkit login
 ```
 
 2. Build your tool:
 ```bash
-atm build
+openkit build
 ```
 
-3. Publish to ATM:
+3. Publish to OpenKit:
 ```bash
-atm publish
+openkit publish
 ```
 
-After publishing, you'll receive a URL where you can view your tool on ATM. Other developers and AI agents can discover and use your tool through the ATM platform.
+After publishing, you'll receive a URL where you can view your tool on OpenKit. Other developers and AI agents can discover and use your tool through the OpenKit platform.
 
 ## License
 

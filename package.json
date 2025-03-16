@@ -1,8 +1,8 @@
 {
-  "name": "atm",
+  "name": "openkit",
   "private": true,
   "scripts": {
-    "build:toolmaker": "turbo build --filter=@synaptic-ai/atm",
+    "build:toolmaker": "turbo build --filter=@opkt/cli",
     "dev": "turbo dev",
     "lint": "turbo lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\""

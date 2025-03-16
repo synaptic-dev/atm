@@ -4,7 +4,7 @@
   "description": "Multi-capability clock tool",
   "main": "index.ts",
   "dependencies": {
-    "@synaptic-ai/toolmaker": "workspace:*",
+    "@opkt/toolmaker": "workspace:*",
     "zod": "^3.22.4"
   }
 } 
