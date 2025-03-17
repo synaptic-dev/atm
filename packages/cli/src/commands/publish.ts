@@ -6,6 +6,8 @@ import fetch from "node-fetch";
 import http from "http";
 
 const AUTH_PORT = 42420;
+const COOPER_URL = "https://cooper.openkit.fun";
+const OPENKIT_URL = "https://openkit.fun";
 
 interface PublishOptions {
   target?: string;
@@ -65,7 +67,7 @@ async function uploadToolTarball(
 
     spinner.text = `Uploading ${toolName} to API...`;
     const response = await fetch(
-      `http://localhost:8787/upload?userId=${encodeURIComponent(userId)}&refreshToken=${encodeURIComponent(refreshToken)}`,
+      `${COOPER_URL}/upload?userId=${encodeURIComponent(userId)}&refreshToken=${encodeURIComponent(refreshToken)}`,
       {
         method: "POST",
         headers: {
@@ -148,7 +150,7 @@ export async function publishTool(options: PublishOptions = {}): Promise<void> {
     // Start the authentication server
     return new Promise((resolve, reject) => {
       // Set up server to receive authentication tokens
-      const publishUrl = `http://localhost:4200/publish`;
+      const publishUrl = `${OPENKIT_URL}/publish`;
 
       console.log("\nTo publish your tools to OpenKit, please confirm at:");
       console.log("\x1b[36m%s\x1b[0m", publishUrl); // Cyan color for URL

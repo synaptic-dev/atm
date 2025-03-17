@@ -321,7 +321,7 @@ const AsyncFileContent = async ({
   try {
     const filePath = `${toolHandle}-${capabilityKey}`;
     const fileResponse = await fetch(
-      `${process.env.NEXT_PUBLIC_R2_BUCKET_URL}/files/${toolOwnerId}/${filePath}`,
+      `${process.env.NEXT_PUBLIC_COOPER_URL}/files/${toolOwnerId}/${filePath}`,
       {
         headers: {
           "Content-Type": "application/x-gzip",
