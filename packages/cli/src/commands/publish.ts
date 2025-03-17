@@ -1,62 +1,54 @@
-import path from 'path';
-import fs from 'fs';
-import { CONFIG_FILE } from '../config';
-import os from 'os';
-import tar from 'tar';
-import fetch from 'node-fetch';
+import path from "path";
+import fs from "fs";
+import os from "os";
+import tar from "tar";
+import fetch from "node-fetch";
+import http from "http";
 
-interface Config {
-  refresh_token: string;
-  access_token: string;
-  user_id: string;
-  username: string;
-  supabase_url: string;
-  supabase_key: string;
-}
+const AUTH_PORT = 42420;
 
 interface PublishOptions {
   target?: string;
-  userid?: string;
-}
-
-function getConfig(): Config {
-  if (!fs.existsSync(CONFIG_FILE)) {
-    throw new Error('Please login first using: openkit login');
-  }
-  return JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf-8'));
 }
 
 // Helper function to find all tool files recursively
-function findToolFiles(directory: string): { path: string, name: string }[] {
-  const result: { path: string, name: string }[] = [];
-  
+function findToolFiles(directory: string): { path: string; name: string }[] {
+  const result: { path: string; name: string }[] = [];
+
   // Get all entries in the directory
   const entries = fs.readdirSync(directory, { withFileTypes: true });
-  
+
   // Process each entry
   for (const entry of entries) {
     const entryPath = path.join(directory, entry.name);
-    
+
     if (entry.isDirectory()) {
       // Recursively process subdirectories
       const subDirTools = findToolFiles(entryPath);
       result.push(...subDirTools);
-    } else if (entry.name.endsWith('.ts')) {
+    } else if (entry.name.endsWith(".ts")) {
       // Add TypeScript files to the result
-      result.push({ 
+      result.push({
         path: entryPath,
-        name: entry.name.slice(0, -3) // Remove .ts extension
+        name: entry.name.slice(0, -3), // Remove .ts extension
       });
     }
   }
-  
+
   return result;
 }
 
 // Upload a tool as a tarball to the API
-async function uploadToolTarball(userId: string, toolName: string, targetDir: string, accessToken: string, refreshToken: string, spinner: any): Promise<boolean> {
+async function uploadToolTarball(
+  userId: string,
+  toolName: string,
+  targetDir: string,
+  accessToken: string,
+  refreshToken: string,
+  spinner: any,
+): Promise<boolean> {
   const tarballPath = path.join(os.tmpdir(), `${toolName}.tar.gz`);
-  
+
   try {
     // Create a tarball of the directory
     await tar.create(
@@ -65,34 +57,37 @@ async function uploadToolTarball(userId: string, toolName: string, targetDir: st
         file: tarballPath,
         cwd: path.dirname(targetDir),
       },
-      [path.basename(targetDir)]
+      [path.basename(targetDir)],
     );
-    
+
     // Upload the tarball to the API
     const fileContent = fs.readFileSync(tarballPath);
-    
+
     spinner.text = `Uploading ${toolName} to API...`;
-    const response = await fetch(`http://localhost:8787/upload?userId=${encodeURIComponent(userId)}&refreshToken=${encodeURIComponent(refreshToken)}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-gzip',
-        'Tool-Name': toolName,
-        'Authorization': `Bearer ${accessToken}`,
+    const response = await fetch(
+      `http://localhost:8787/upload?userId=${encodeURIComponent(userId)}&refreshToken=${encodeURIComponent(refreshToken)}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-gzip",
+          "Tool-Name": toolName,
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: fileContent,
       },
-      body: fileContent
-    });
-    
+    );
+
     // Clean up the temporary file
     fs.unlinkSync(tarballPath);
-    
+
     if (response.ok) {
       return true;
     } else {
-      console.error('Upload failed:', response.statusText);
+      console.error("Upload failed:", response.statusText);
       return false;
     }
   } catch (err) {
-    console.error('Error creating or uploading tarball:', err);
+    console.error("Error creating or uploading tarball:", err);
     // Clean up if file exists
     if (fs.existsSync(tarballPath)) {
       fs.unlinkSync(tarballPath);
@@ -105,59 +100,26 @@ export async function publishTool(options: PublishOptions = {}): Promise<void> {
   // Dynamically import ora
   let ora;
   try {
-    ora = (await import('ora')).default;
+    ora = (await import("ora")).default;
   } catch (error) {
-    console.error('Failed to initialize. Please try again.');
+    console.error("Failed to initialize. Please try again.");
     process.exit(1);
   }
-  
+
   // Log directly first to ensure visibility
-  console.log('Publishing to OpenKit...');
-  
-  let spinner = ora('').start();
-  
+  console.log("Publishing to OpenKit...");
+
+  let spinner = ora("").start();
+
   try {
     // Get the target directory
-    const targetDir = options.target || 'openkit-dist';
+    const targetDir = options.target || "openkit-dist";
     const targetPath = path.resolve(process.cwd(), targetDir);
-    
+
     // Check if target directory exists
     if (!fs.existsSync(targetPath)) {
       spinner.fail(`No ${targetDir} directory found`);
       console.error(`Directory ${targetDir} does not exist.`);
-      process.exit(1);
-    }
-    
-    // Get config information
-    let config;
-    try {
-      config = getConfig();
-      console.log('config', config)
-    } catch (error) {
-      spinner.fail('Failed to load configuration');
-      console.error('Authentication failed or expired. Please login again:');
-      console.error('Run: openkit login');
-      process.exit(1);
-    }
-    
-    // Get user ID from options or config
-    let userId = options.userid;
-    if (!userId) {
-      if (config && config.user_id) {
-        userId = config.user_id;
-      } else {
-        spinner.fail('User ID is required');
-        console.error('Please provide a user ID with --userid or login using: openkit login');
-        process.exit(1);
-      }
-    }
-    
-    // Get access token from config
-    const accessToken = config.access_token;
-    const refreshToken = config.refresh_token;
-    if (!accessToken) {
-      spinner.fail('Access token is required');
-      console.error('Please login using: openkit login');
       process.exit(1);
     }
 
@@ -166,48 +128,130 @@ export async function publishTool(options: PublishOptions = {}): Promise<void> {
     try {
       toolFiles = findToolFiles(targetPath);
     } catch (error) {
-      spinner.fail('Failed to read directory contents');
+      spinner.fail("Failed to read directory contents");
       console.error(`Error reading ${targetDir} directory:`, error);
       process.exit(1);
     }
-    
+
     if (toolFiles.length === 0) {
-      spinner.fail('No tools found');
-      console.error(`No tool files found in ${targetDir} or its subdirectories`);
+      spinner.fail("No tools found");
+      console.error(
+        `No tool files found in ${targetDir} or its subdirectories`,
+      );
       process.exit(1);
     }
 
     // Show how many tools were found
     spinner.succeed(`Found ${toolFiles.length} tools to publish`);
-    
-    // Process each tool
-    for (const toolFile of toolFiles) {
-      // Extract tool name from path
-      const toolName = toolFile.name;
-      const toolPath = path.dirname(toolFile.path);
-      
-      // Log directly for visibility of tool publishing
-      console.log(`Publishing tool: ${toolName} from ${toolPath}`);
-      
-      // Create a new spinner for uploading
-      spinner = ora('').start();
+    spinner.stop();
 
-      // Upload the tool file as a tarball
-      const success = await uploadToolTarball(userId, toolName, toolPath, accessToken, refreshToken, spinner);
-      
-      if (!success) {
-        spinner.fail(`Failed to publish tool: ${toolName}`);
-        process.exit(1);
-      }
+    // Start the authentication server
+    return new Promise((resolve, reject) => {
+      // Set up server to receive authentication tokens
+      const publishUrl = `http://localhost:4200/publish`;
 
-      // Success!
-      spinner.succeed(`Published tool: ${toolName}`);
-    }
+      console.log("\nTo publish your tools to OpenKit, please confirm at:");
+      console.log("\x1b[36m%s\x1b[0m", publishUrl); // Cyan color for URL
+      console.log("\nWaiting for confirmation...");
 
-    console.log(`\nTools published successfully! 🚀`);
-    
+      const server = http.createServer(async (req, res) => {
+        const url = new URL(req.url!, `http://localhost:${AUTH_PORT}`);
+        const accessToken = url.searchParams.get("access_token");
+        const userId = url.searchParams.get("user_id");
+        const returnUrl = url.searchParams.get("return_url");
+        const refreshToken = url.searchParams.get("refresh_token") || "";
+
+        if (accessToken && userId) {
+          // Send success response
+          res.writeHead(302, {
+            "Content-Type": "text/html",
+            // If a return_url was provided, redirect to it
+            Location: returnUrl || "/",
+          });
+
+          if (!returnUrl) {
+            // Only show HTML content if no return URL was provided
+            res.end(`
+              <html>
+                <body>
+                  <h1>Publication Confirmed!</h1>
+                  <p>You can now close this window and return to the terminal.</p>
+                </body>
+              </html>
+            `);
+          } else {
+            // For redirects, just end the response
+            res.end();
+          }
+
+          // Close server after successful authentication
+          server.close();
+
+          // Now proceed with the publishing using the received tokens
+          spinner = ora("").start();
+
+          // Process each tool
+          for (const toolFile of toolFiles) {
+            // Extract tool name from path
+            const toolName = toolFile.name;
+            const toolPath = path.dirname(toolFile.path);
+
+            // Log directly for visibility of tool publishing
+            spinner.text = `Publishing tool: ${toolName} from ${toolPath}`;
+
+            // Upload the tool file as a tarball
+            const success = await uploadToolTarball(
+              userId,
+              toolName,
+              toolPath,
+              accessToken,
+              refreshToken,
+              spinner,
+            );
+
+            if (!success) {
+              spinner.fail(`Failed to publish tool: ${toolName}`);
+              reject(new Error(`Failed to publish tool: ${toolName}`));
+              return;
+            }
+
+            // Success!
+            spinner.succeed(`Published tool: ${toolName}`);
+          }
+
+          console.log(`\nTools published successfully! 🚀`);
+          resolve();
+        } else {
+          res.writeHead(400, { "Content-Type": "text/html" });
+          res.end(`
+            <html>
+              <body>
+                <h1>Publication Failed</h1>
+                <p>Missing required authentication information. Please try again.</p>
+              </body>
+            </html>
+          `);
+        }
+      });
+
+      server.listen(AUTH_PORT, () => {
+        // Server is listening
+      });
+
+      // Handle server errors
+      server.on("error", (error: any) => {
+        if (error.code === "EADDRINUSE") {
+          console.error(
+            `Port ${AUTH_PORT} is already in use. Please try again later.`,
+          );
+        } else {
+          console.error("Server error:", error);
+        }
+        reject(error);
+      });
+    });
   } catch (error: any) {
-    spinner.fail('Publishing failed');
+    spinner.fail("Publishing failed");
     console.error(error?.message || error);
     process.exit(1);
   }
