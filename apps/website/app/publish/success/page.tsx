@@ -18,7 +18,7 @@ export default function SuccessPage() {
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                strokeWidth={2}
+                strokeWidth="2"
                 d="M5 13l4 4L19 7"
               />
             </svg>
@@ -30,11 +30,11 @@ export default function SuccessPage() {
         </div>
 
         <div className="mb-6 bg-gray-50 p-4 rounded-md text-left">
-          <h2 className="font-semibold mb-2">What's next?</h2>
+          <h2 className="font-semibold mb-2">What&apos;s next?</h2>
           <ul className="list-disc pl-5 space-y-1 text-gray-700">
             <li>The publication process will complete in the terminal</li>
             <li>
-              You'll be able to manage your tools in the OpenKit dashboard
+              You&apos;ll be able to manage your tools in the OpenKit dashboard
             </li>
             <li>Your tools will be available to users shortly</li>
           </ul>

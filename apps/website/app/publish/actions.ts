@@ -2,7 +2,7 @@
 import { createClient } from "@/services/supabase/server";
 import { redirect } from "next/navigation";
 
-const confirmPublish = async (formData: FormData): Promise<void> => {
+const confirmPublish = async (): Promise<void> => {
   const supabase = await createClient();
   const { data, error } = await supabase.auth.getSession();
 

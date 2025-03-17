@@ -13,13 +13,11 @@ import {
 import { Button } from "@/components/ui/button";
 import {
   AlertCircle,
-  ArrowLeft,
   Calendar,
   CircleDot,
   Info,
   Layers,
   Trash2,
-  User,
 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -34,6 +32,13 @@ import {
 } from "@/components/ui/accordion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
+interface Capability {
+  id: string;
+  name?: string;
+  description?: string;
+  key: string;
+}
+
 const ToolPage = async ({
   params,
 }: {
@@ -42,7 +47,7 @@ const ToolPage = async ({
   const user = await getUser();
   const { username, tool_handle } = await params;
   const supabase = await createClient();
-  const { data, error } = await supabase
+  const { data } = await supabase
     .from("tools")
     .select(
       `
@@ -181,7 +186,7 @@ const ToolPage = async ({
                       <h3 className="font-medium mb-4">Capabilities</h3>
                       <Accordion type="single" collapsible className="w-full">
                         {tool.tool_capabilities.map(
-                          (capability: any, index: number) => (
+                          (capability: Capability, index: number) => (
                             <AccordionItem
                               key={capability.id}
                               value={capability.id}
@@ -338,7 +343,8 @@ const AsyncFileContent = async ({
         </div>
       );
     }
-  } catch (error) {
+  } catch (_) {
+    console.error("Error loading configuration file.", _);
     return (
       <div className="text-sm text-muted-foreground p-4">
         Error loading configuration file.

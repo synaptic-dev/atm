@@ -5,9 +5,8 @@ import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar, Pencil, Plus, User } from "lucide-react";
+import { Pencil, Plus } from "lucide-react";
 import ToolCard from "@/components/tool-card";
-import { formatDistanceToNow } from "date-fns";
 
 const UserPage = async ({
   params,
@@ -21,7 +20,7 @@ const UserPage = async ({
   const isSelf = user?.user_metadata.user_name === username;
 
   // Get the tools first
-  const { data: tools, error } = await supabase
+  const { data: tools } = await supabase
     .from("tools")
     .select("*")
     .eq("owner_username", username);
@@ -30,7 +29,6 @@ const UserPage = async ({
   let authorMetadata: { avatar_url?: string; full_name?: string } = {};
   let authorAvatar = "";
   let authorFullName = "";
-  let createdAt = null;
 
   if (tools && tools.length > 0) {
     const ownerId = tools[0].owner_id;
@@ -40,7 +38,6 @@ const UserPage = async ({
     authorMetadata = authorData?.user?.user_metadata || {};
     authorAvatar = authorMetadata.avatar_url || "";
     authorFullName = authorMetadata.full_name || "";
-    createdAt = authorData?.user?.created_at;
   }
 
   return (

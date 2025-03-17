@@ -11,6 +11,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Github } from "lucide-react";
+import Link from "next/link";
 
 export default async function Login() {
   const user = await getUser();
@@ -40,19 +41,19 @@ export default async function Login() {
         </CardContent>
         <CardFooter className="text-sm text-muted-foreground">
           By signing in, you agree to our{" "}
-          <a
+          <Link
             href="/terms"
             className="underline underline-offset-4 hover:text-primary ml-1 mr-1"
           >
             Terms of Service
-          </a>
+          </Link>
           and
-          <a
+          <Link
             href="/privacy"
             className="underline underline-offset-4 hover:text-primary ml-1"
           >
             Privacy Policy
-          </a>
+          </Link>
           .
         </CardFooter>
       </Card>
