@@ -96,7 +96,7 @@ const ToolPage = async ({
   // Get the file content for both single capability tools and the first tab of multi-capability tools
   let fileContent = null;
   const fileResponse = await fetch(
-    `${process.env.NEXT_PUBLIC_R2_BUCKET_URL}/files/${tool.owner_id}/${tool_handle}`,
+    `${process.env.NEXT_PUBLIC_COOPER_URL}/files/${tool.owner_id}/${tool_handle}`,
     {
       headers: {
         "Content-Type": "application/x-gzip",
