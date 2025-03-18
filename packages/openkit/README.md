@@ -1,11 +1,11 @@
-# @opkt/toolmaker
+# @opkt/openkit
 
 OpenKit Toolmaker provides a type-safe way to define agent tools using Zod schemas and TypeScript.
 
 ## Installation
 
 ```bash
-npm install @opkt/toolmaker
+npm install @opkt/openkit
 ```
 
 ## Quick Start
@@ -15,22 +15,22 @@ npm install @opkt/toolmaker
 The simplest way to create a tool with a single capability:
 
 ```typescript
-import { z } from 'zod';
-import { Tool } from '@opkt/toolmaker';
+import { z } from "zod";
+import { Tool } from "@opkt/openkit";
 
 // Define a single-capability tool directly
 const greetingTool = new Tool({
-  name: 'Greeting',
-  description: 'A simple greeting tool',
+  name: "Greeting",
+  description: "A simple greeting tool",
   schema: z.object({
-    name: z.string().describe("Name of the person to greet")
+    name: z.string().describe("Name of the person to greet"),
   }),
   runner: async (params) => {
     return {
       message: `Hello, ${params.name}!`,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     };
-  }
+  },
 });
 
 export default greetingTool;
@@ -41,44 +41,46 @@ export default greetingTool;
 For tools with multiple capabilities:
 
 ```typescript
-import { z } from 'zod';
-import { Tool, ToolCapability } from '@opkt/toolmaker';
+import { z } from "zod";
+import { Tool, ToolCapability } from "@opkt/openkit";
 
 // Define your input schema
-const greetSchema = z.object({
-  name: z.string().describe("Name of the person to greet")
-}).describe("Parameters for greeting");
+const greetSchema = z
+  .object({
+    name: z.string().describe("Name of the person to greet"),
+  })
+  .describe("Parameters for greeting");
 
 // Create capability instances
 const greetCapability = new ToolCapability({
-  name: 'Greet',
-  description: 'Greets a person by name',
+  name: "Greet",
+  description: "Greets a person by name",
   schema: greetSchema,
   runner: async (params) => {
     return {
       message: `Hello, ${params.name}!`,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     };
-  }
+  },
 });
 
 const farewellCapability = new ToolCapability({
-  name: 'Farewell',
-  description: 'Says goodbye to a person',
+  name: "Farewell",
+  description: "Says goodbye to a person",
   schema: greetSchema, // reusing the same schema
   runner: async (params) => {
     return {
       message: `Goodbye, ${params.name}!`,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     };
-  }
+  },
 });
 
 // Create a multi-capability tool with all capabilities
 const multiCapabilityTool = new Tool({
-  name: 'Hello World',
-  description: 'A simple tool with greeting capabilities',
-  capabilities: [greetCapability, farewellCapability]
+  name: "Hello World",
+  description: "A simple tool with greeting capabilities",
+  capabilities: [greetCapability, farewellCapability],
 });
 
 export default multiCapabilityTool;
@@ -114,6 +116,7 @@ const multiCapabilityTool = new Tool({
 ```
 
 Methods:
+
 - `getCapabilities()`: Returns all capabilities of the tool
 - `getName()`: Returns the tool's name
 - `getDescription()`: Returns the tool's description
@@ -125,14 +128,15 @@ Methods:
 
 ```typescript
 const capability = new ToolCapability({
-  name: string,        // Name of the capability
+  name: string, // Name of the capability
   description: string, // What this capability does
-  schema: ZodType,     // Input parameters schema
-  runner: Function     // Async function that executes the capability
+  schema: ZodType, // Input parameters schema
+  runner: Function, // Async function that executes the capability
 });
 ```
 
 Key features:
+
 - Type-safe input validation using Zod schemas
 - Automatic JSON Schema generation for AI consumption
 - Built-in TypeScript support
@@ -142,29 +146,31 @@ Key features:
 The `Toolkit` class allows you to group multiple tools together:
 
 ```typescript
-import { Toolkit } from '@opkt/toolmaker';
+import { Toolkit } from "@opkt/openkit";
 
 const toolkit = new Toolkit({
-  tools: [tool1, tool2, tool3] // Array of Tool instances
+  tools: [tool1, tool2, tool3], // Array of Tool instances
 });
 ```
 
 Methods:
+
 - `openai()`: Transforms all tool capabilities into OpenAI function format
 - `handler(params)`: Handles and processes tool calls from OpenAI
 - `getTools()`: Returns all tools in the toolkit
 - `addTool(tool)`: Add a new tool to the toolkit
 
 Processing tool calls:
+
 ```typescript
 // Process a single message with tool calls
-const toolResponses = await toolkit.handler({ 
-  message: chatCompletionMessage 
+const toolResponses = await toolkit.handler({
+  message: chatCompletionMessage,
 });
 
 // Or process a ChatCompletion object
-const toolResponses = await toolkit.handler({ 
-  chatCompletion: chatCompletionObject 
+const toolResponses = await toolkit.handler({
+  chatCompletion: chatCompletionObject,
 });
 ```
 
@@ -180,11 +186,13 @@ When your tools are used with AI systems like OpenAI:
 ## Best Practices
 
 1. **Tool Design**
+
    - Use the single-capability pattern for simple tools with one function
    - Use the multi-capability pattern for complex tools with multiple related functions
    - Set all capabilities at construction time
 
 2. **Schema Design**
+
    - Use descriptive names for schema properties
    - Add descriptions using `.describe()` for better AI understanding
    - Keep schemas focused and single-purpose
@@ -211,6 +219,7 @@ your-tool/
 ## TypeScript Support
 
 Toolmaker is written in TypeScript and provides full type definitions. You get:
+
 - Type inference for schemas
 - Autocomplete for tool and capability options
 - Type checking for runner functions
@@ -224,16 +233,19 @@ npm install -g @opkt/cli
 ```
 
 1. First, authenticate with OpenKit:
+
 ```bash
 openkit login
 ```
 
 2. Build your tool:
+
 ```bash
 openkit build
 ```
 
 3. Publish to OpenKit:
+
 ```bash
 openkit publish
 ```
@@ -242,4 +254,4 @@ After publishing, you'll receive a URL where you can view your tool on OpenKit. 
 
 ## License
 
-MIT 
+MIT

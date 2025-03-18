@@ -1,7 +1,7 @@
 {
   "name": "@opkt/cli",
-  "version": "0.0.8",
-  "description": "OpenKit - Build and share your awesome AI Agent tools",
+  "version": "0.0.1",
+  "description": "OpenKit CLI - Build and share AI Agent tools",
   "scripts": {
     "build": "tsup --config tsup.config.ts",
     "postbuild": "chmod +x dist/index.js"
@@ -21,7 +21,7 @@
     "access": "public"
   },
   "dependencies": {
-    "@opkt/toolmaker": "workspace:*",
+    "@opkt/openkit": "workspace:*",
     "@supabase/supabase-js": "^2.39.7",
     "commander": "^11.1.0",
     "dotenv": "^16.4.7",

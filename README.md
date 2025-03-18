@@ -5,7 +5,7 @@ OpenKit is a platform for creating, sharing, and discovering tools for your AI a
 ## 🛠️ Agent Tool Maker
 
 ```bash
-npm install @opkt/toolmaker
+npm install @opkt/openkit
 ```
 
 Create powerful AI tools with type safety and ease:
@@ -14,7 +14,8 @@ Create powerful AI tools with type safety and ease:
 - **Capability-based Design**: Define clear inputs and outputs for AI consumption
 
 ```typescript
-import { Tool, ToolCapability } from "@opkt/toolmaker";
+import OpenKit from "@opkt/openkit";
+import { Tool, ToolCapability } from "@opkt/openkit";
 import { z } from "zod";
 
 // Define a capability with type-safe schema
@@ -64,7 +65,7 @@ Discover and use tools built by the community:
 npm install -g @opkt/cli
 
 # Install the toolmaker in your project
-npm install @opkt/toolmaker
+npm install @opkt/openkit
 ```
 
 2. Create a new tool:

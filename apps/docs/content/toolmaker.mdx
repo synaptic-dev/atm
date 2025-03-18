@@ -1,15 +1,15 @@
 ---
-title: Toolmaker SDK
+title: OpenKit SDK
 ---
 
-# Toolmaker SDK
+# OpenKit SDK
 
-With Toolmaker SDK, you can create both single-capability and multi-capability tools, offering a structured and scalable approach to building tools for AI agents. This flexibility ensures that your tools are not only robust and well-organized but also fully compatible with the OpenAI SDK, enabling seamless integration and enhanced functionality.
+With OpenKit SDK, you can create both single-capability and multi-capability tools, offering a structured and scalable approach to building tools for AI agents. This flexibility ensures that your tools are not only robust and well-organized but also fully compatible with the OpenAI SDK, enabling seamless integration and enhanced functionality.
 
 ## Installation
 
 ```bash
-npm install @opkt/toolmaker
+npm install @opkt/openkit
 ```
 
 ## Quick Start
@@ -20,7 +20,7 @@ The simplest way to create a tool with a single capability:
 
 ```typescript
 import { z } from "zod";
-import { Tool } from "@opkt/toolmaker";
+import { Tool } from "@opkt/openkit";
 
 // Define a single-capability tool directly
 const getCurrentTime = new Tool({
@@ -62,7 +62,7 @@ For tools with multiple capabilities:
 
 ```typescript
 import { z } from "zod";
-import { Tool, ToolCapability } from "@opkt/toolmaker";
+import { Tool, ToolCapability } from "@opkt/openkit";
 
 // Schema for read email
 const readEmailSchema = z
@@ -129,7 +129,7 @@ export default emailTool;
 
 ## Using with OpenAI
 
-Toolmaker SDK ensures that the tools you create are fully compatible with OpenAI's function calling API. This compatibility allows you to seamlessly integrate your tools into AI systems, enhancing their capabilities and functionality.
+OpenKit SDK ensures that the tools you create are fully compatible with OpenAI's function calling API. This compatibility allows you to seamlessly integrate your tools into AI systems, enhancing their capabilities and functionality.
 
 ```typescript
 import OpenAI from 'openai';
@@ -156,7 +156,7 @@ With Toolkit, you can group multiple tools together and handle tool call request
 ### Example Usage
 
 ```typescript
-import { Toolkit } from '@opkt/toolmaker';
+import { Toolkit } from '@opkt/openkit';
 
 const toolkit = new Toolkit({
   tools: [tool1, tool2, tool3]

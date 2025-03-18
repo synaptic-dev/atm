@@ -1,5 +1,5 @@
-import { Tool } from '@opkt/toolmaker';
-import { greetCapability } from './capabilities/greet';
+import { Tool } from "@opkt/openkit";
+import { greetCapability } from "./capabilities/greet";
 
 const tool = new Tool();
 

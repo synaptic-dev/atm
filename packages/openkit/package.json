@@ -1,12 +1,15 @@
 {
-  "name": "@opkt/toolmaker",
-  "version": "0.0.4",
-  "description": "OpenKit Toolmaker - easily create and manage AI Agent tools",
+  "name": "@opkt/openkit",
+  "version": "0.0.1",
+  "description": "OpenKit - The World SDK for AI Agents",
   "homepage": "https://openkit.fun",
   "repository": "https://github.com/synaptic-dev/openkit",
   "scripts": {
     "build": "tsup src/index.ts --format cjs,esm --dts",
-    "prepublishOnly": "pnpm build"
+    "prepublishOnly": "pnpm build",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -21,7 +24,8 @@
     "@tsconfig/node-lts": "^22.0.1",
     "@types/jszip": "^3.4.1",
     "@types/node": "^20.11.17",
-    "tsup": "^8.3.5"
+    "tsup": "^8.3.5",
+    "vitest": "^1.6.1"
   },
   "keywords": [
     "cli",
