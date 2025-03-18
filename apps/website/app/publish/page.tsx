@@ -1,34 +1,49 @@
 import { createClient } from "@/services/supabase/server";
-import { confirmPublish } from "./actions";
 import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { AlertCircle, Upload } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import CategoryForm from "./category-form";
+import { type Database } from "@/types/supabase";
+
+// Define the tool categories enum and values
+type ToolCategory = Database["public"]["Enums"]["tool_categories"];
+
+// These values should match the enum in the database
+const TOOL_CATEGORIES: ToolCategory[] = [
+  "Communication",
+  "Productivity",
+  "Collaboration",
+  "Social Media",
+  "Analytics",
+  "Finance",
+  "Fun",
+  "Utility",
+  "Uncategorized",
+];
 
 const PublishPage = async () => {
   const supabase = await createClient();
-  const { data, error } = await supabase.auth.getSession();
+  const { data: authData, error: authError } = await supabase.auth.getSession();
 
-  if (error) {
+  if (authError) {
     return (
       <div className="py-10">
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Error</AlertTitle>
-          <AlertDescription>{error.message}</AlertDescription>
+          <AlertDescription>{authError.message}</AlertDescription>
         </Alert>
       </div>
     );
   }
 
-  if (!data.session) {
+  if (!authData.session) {
     return (
       <div className="py-10">
         <Alert variant="destructive">
@@ -54,21 +69,15 @@ const PublishPage = async () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-muted-foreground mb-6">
                 Publishing your tool will make it available to others in the
                 OpenKit community. Make sure your tool is ready for others to
                 use.
               </p>
+
+              <CategoryForm categories={TOOL_CATEGORIES} />
             </div>
           </CardContent>
-          <CardFooter>
-            <form action={confirmPublish} className="w-full">
-              <Button type="submit" className="w-full">
-                <Upload className="mr-2 h-4 w-4" />
-                Publish Tool
-              </Button>
-            </form>
-          </CardFooter>
         </Card>
       </div>
     </div>

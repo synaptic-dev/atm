@@ -18,6 +18,7 @@ import {
   Info,
   Layers,
   Trash2,
+  Tag,
 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -134,6 +135,15 @@ const ToolPage = async ({
                       </>
                     )}
                   </Badge>
+                  {tool.category && (
+                    <Badge
+                      variant="secondary"
+                      className="flex items-center gap-1 h-6 text-xs font-normal"
+                    >
+                      <Tag className="h-3 w-3" />
+                      <span>{tool.category}</span>
+                    </Badge>
+                  )}
                 </div>
               </div>
               <CardDescription className="text-base">

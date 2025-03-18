@@ -1,12 +1,24 @@
 "use server";
 import { createClient } from "@/services/supabase/server";
 import { redirect } from "next/navigation";
+import { type Database } from "@/types/supabase";
 
-const confirmPublish = async (): Promise<void> => {
+// Define the tool category type
+type ToolCategory = Database["public"]["Enums"]["tool_categories"];
+
+const confirmPublish = async (formData: FormData): Promise<void> => {
+  const category = formData.get("category") as ToolCategory;
+
+  // Validate category
+  if (!category) {
+    throw new Error("Please select a category for your tool");
+  }
+
   const supabase = await createClient();
   const { data, error } = await supabase.auth.getSession();
 
   console.log("🚀 ~ confirmPublish ~ data:", data);
+  console.log("🚀 ~ confirmPublish ~ category:", category);
 
   if (error) {
     throw new Error(error.message);
@@ -33,6 +45,9 @@ const confirmPublish = async (): Promise<void> => {
   if (data.session.user?.id) {
     redirectUrl.searchParams.set("user_id", data.session.user.id);
   }
+
+  // Add category parameter
+  redirectUrl.searchParams.set("category", category);
 
   // Redirect to a special handler page that will redirect to localhost
   // and then automatically show success

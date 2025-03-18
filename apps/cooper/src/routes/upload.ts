@@ -121,6 +121,10 @@ uploadRouter.post("/", async (c) => {
       );
     }
 
+    // Get category from query parameter, default to "uncategorized" if not provided
+    const category = c.req.query("category") || "Uncategorized";
+    console.log("Tool category:", category);
+
     // Get the raw gzip data
     const gzipData = new Uint8Array(await c.req.arrayBuffer());
 
@@ -419,6 +423,7 @@ uploadRouter.post("/", async (c) => {
               owner_id: user.id,
               owner_username: user.user_metadata.user_name,
               tool_handle: toKebabCase(metadata.name),
+              category: category,
             },
             {
               onConflict: "owner_id, tool_handle",

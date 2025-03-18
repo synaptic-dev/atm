@@ -3,7 +3,7 @@
   "version": "0.0.8",
   "description": "OpenKit - Build and share your awesome AI Agent tools",
   "scripts": {
-    "build": "tsup src/index.ts src/commands/*.ts --format cjs,esm --dts --clean",
+    "build": "tsup --config tsup.config.ts",
     "postbuild": "chmod +x dist/index.js"
   },
   "author": "Synaptic",
@@ -21,9 +21,10 @@
     "access": "public"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.39.7",
     "@opkt/toolmaker": "workspace:*",
+    "@supabase/supabase-js": "^2.39.7",
     "commander": "^11.1.0",
+    "dotenv": "^16.4.7",
     "esbuild": "^0.20.0",
     "fs-extra": "^11.3.0",
     "node-fetch": "2",

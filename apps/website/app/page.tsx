@@ -15,7 +15,7 @@ export default async function Home() {
               Welcome to OpenKit
             </Badge>
             <h1 className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-bold">
-              The Essential Toolkit <br /> for Agents
+              The App Store for Agents
             </h1>
             <p className="max-w-[42rem] leading-normal text-muted-foreground sm:text-xl sm:leading-8">
               Unleash the power of agents with OpenKit
@@ -34,6 +34,7 @@ export default async function Home() {
               owner_username={tool.owner_username}
               tool_handle={tool.tool_handle}
               created_at={tool.created_at}
+              category={tool.category}
             />
           ))}
         </div>

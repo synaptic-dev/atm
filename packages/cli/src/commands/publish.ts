@@ -5,12 +5,17 @@ import tar from "tar";
 import fetch from "node-fetch";
 import http from "http";
 
-const AUTH_PORT = 42420;
-const COOPER_URL = "https://cooper.openkit.fun";
-const OPENKIT_URL = "https://openkit.fun";
+// Remove direct dotenv import and config
+// Environment variables will be injected by tsup during build
+
+// Use process.env directly with fallbacks
+const AUTH_PORT = process.env.AUTH_PORT || "42420";
+const COOPER_URL = process.env.COOPER_URL || "http://localhost:3001";
+const OPENKIT_URL = process.env.OPENKIT_URL || "https://openkit.fun";
 
 interface PublishOptions {
   target?: string;
+  category?: string;
 }
 
 // Helper function to find all tool files recursively
@@ -47,6 +52,7 @@ async function uploadToolTarball(
   targetDir: string,
   accessToken: string,
   refreshToken: string,
+  category: string,
   spinner: any,
 ): Promise<boolean> {
   const tarballPath = path.join(os.tmpdir(), `${toolName}.tar.gz`);
@@ -65,9 +71,9 @@ async function uploadToolTarball(
     // Upload the tarball to the API
     const fileContent = fs.readFileSync(tarballPath);
 
-    spinner.text = `Uploading ${toolName} to API...`;
+    spinner.text = `Uploading ${toolName} to API (category: ${category})...`;
     const response = await fetch(
-      `${COOPER_URL}/upload?userId=${encodeURIComponent(userId)}&refreshToken=${encodeURIComponent(refreshToken)}`,
+      `${COOPER_URL}/upload?userId=${encodeURIComponent(userId)}&refreshToken=${encodeURIComponent(refreshToken)}&category=${encodeURIComponent(category)}`,
       {
         method: "POST",
         headers: {
@@ -118,6 +124,11 @@ export async function publishTool(options: PublishOptions = {}): Promise<void> {
     const targetDir = options.target || "openkit-dist";
     const targetPath = path.resolve(process.cwd(), targetDir);
 
+    // Get the category if provided
+    const category = options.category || "uncategorized";
+
+    spinner.text = `Publishing to category: ${category}`;
+
     // Check if target directory exists
     if (!fs.existsSync(targetPath)) {
       spinner.fail(`No ${targetDir} directory found`);
@@ -162,6 +173,7 @@ export async function publishTool(options: PublishOptions = {}): Promise<void> {
         const userId = url.searchParams.get("user_id");
         const returnUrl = url.searchParams.get("return_url");
         const refreshToken = url.searchParams.get("refresh_token") || "";
+        const category = url.searchParams.get("category") || "uncategorized";
 
         if (accessToken && userId) {
           // Send success response
@@ -192,6 +204,11 @@ export async function publishTool(options: PublishOptions = {}): Promise<void> {
           // Now proceed with the publishing using the received tokens
           spinner = ora("").start();
 
+          // Log the category being used
+          spinner.text = `Publishing tools to category: ${category}`;
+          spinner.succeed();
+          spinner = ora("").start();
+
           // Process each tool
           for (const toolFile of toolFiles) {
             // Extract tool name from path
@@ -208,6 +225,7 @@ export async function publishTool(options: PublishOptions = {}): Promise<void> {
               toolPath,
               accessToken,
               refreshToken,
+              category,
               spinner,
             );
 
@@ -221,7 +239,9 @@ export async function publishTool(options: PublishOptions = {}): Promise<void> {
             spinner.succeed(`Published tool: ${toolName}`);
           }
 
-          console.log(`\nTools published successfully! 🚀`);
+          console.log(
+            `\nTools published successfully to category: ${category}! 🚀`,
+          );
           resolve();
         } else {
           res.writeHead(400, { "Content-Type": "text/html" });
