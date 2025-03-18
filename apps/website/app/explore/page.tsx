@@ -2,7 +2,6 @@ import { createClient } from "@/services/supabase/server";
 import ToolCard from "@/components/tool-card";
 import { Search } from "lucide-react";
 import { type Database } from "@/types/supabase";
-import { Filter } from "lucide-react";
 import CategoriesFilter from "./categories-filter";
 
 // Define the tool categories enum and values
