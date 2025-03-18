@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { Tool, ToolCapability } from "@synaptic-ai/toolmaker";
+import { Tool, ToolCapability } from "@opkt/toolmaker";
 
 // Weather schema - for getting weather information with location support
 const weatherSchema = z.object({

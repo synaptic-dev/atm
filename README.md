@@ -1,4 +1,4 @@
-# OpenKit 
+# OpenKit
 
 OpenKit is a platform for creating, sharing, and discovering tools for your AI agents. It consists of three main components:
 
@@ -14,19 +14,19 @@ Create powerful AI tools with type safety and ease:
 - **Capability-based Design**: Define clear inputs and outputs for AI consumption
 
 ```typescript
-import { Tool, ToolCapability } from '@opkt/toolmaker';
-import { z } from 'zod';
+import { Tool, ToolCapability } from "@opkt/toolmaker";
+import { z } from "zod";
 
 // Define a capability with type-safe schema
 const greetCapability = new ToolCapability({
-  name: 'Greet',
-  description: 'Greets a person by name',
+  name: "Greet",
+  description: "Greets a person by name",
   schema: z.object({
-    name: z.string().describe("Name to greet")
+    name: z.string().describe("Name to greet"),
   }),
   runner: async ({ name }) => ({
-    message: `Hello, ${name}!`
-  })
+    message: `Hello, ${name}!`,
+  }),
 });
 ```
 
@@ -49,7 +49,7 @@ openkit publish
 
 ## 🏪 Agent Tool Marketplace
 
-Visit [try-synaptic.ai/openkit](https://try-synaptic.ai/openkit)
+Visit [openkit.fun](https://openkit.fun)
 
 Discover and use tools built by the community:
 
@@ -58,6 +58,7 @@ Discover and use tools built by the community:
 ## Getting Started
 
 1. Install the required packages:
+
 ```bash
 # Install the CLI globally
 npm install -g @opkt/cli
@@ -67,11 +68,13 @@ npm install @opkt/toolmaker
 ```
 
 2. Create a new tool:
+
 ```bash
 openkit init
 ```
 
 3. Build and publish:
+
 ```bash
 openkit build
 openkit publish
@@ -84,6 +87,7 @@ MIT
 ## TODO
 
 ### Website
+
 - [ ] Set up the Next.js frontend project structure.
 - [ ] Implement the homepage with an overview of available tools.
 - [ ] Define clear API contract for tool listing and publishing.
@@ -96,6 +100,7 @@ MIT
 - [ ] Implement continuous integration and deployment pipelines.
 
 ### CLI
+
 - [ ] Ensure the `openkit login` command works seamlessly with browser-based authentication.
 - [ ] Enhance CLI to support complex tool creation scenarios.
 - [ ] Improve error handling and validation during the build process.

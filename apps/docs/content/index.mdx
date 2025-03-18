@@ -1,0 +1,85 @@
+---
+title: Overview
+---
+
+# OpenKit
+
+![Toolmaker](/toolmaker.png)
+
+OpenKit is a platform for creating, sharing, and discovering tools for AI agents. It consists of three main components:
+
+## 🛠️ Agent Tool Maker
+
+```bash
+npm install @opkt/toolmaker
+```
+
+Create powerful AI tools:
+
+- **Capability-based Design**: Create structured, scalable, and easy-to-manage tools
+- **OpenAI Compatible**: Fully compatible with OpenAI
+
+```typescript
+import { Tool } from "@opkt/toolmaker";
+import { z } from "zod";
+
+// Create a single-capability tool
+const greet = new Tool({
+  name: "Greet",
+  description: "Greets a person by name",
+  schema: z.object({
+    name: z.string().describe("Name to greet"),
+  }),
+  runner: async ({ name }) => ({
+    message: `Hello, ${name}!`,
+  }),
+});
+```
+
+Learn more at [Toolmaker SDK](/atm/toolmaker)
+
+## 📦 Agent Tool Manager
+
+```bash
+npm install -g @opkt/cli
+```
+
+With OpenKit CLI, you can easily share any tools to the [OpenKit marketplace](https://openkit.fun).
+
+```bash
+# Build and publish your tool
+openkit login
+openkit build
+openkit publish
+```
+
+Learn more at [OpenKit CLI](/atm/cli)
+
+## 🏪 Agent Tool Marketplace
+
+Visit [openkit.fun](https://openkit.fun) to discover unlimited free tools for AI Agents.
+
+## Getting Started
+
+1. Install the required packages:
+
+```bash
+# Install the CLI globally
+npm install -g @opkt/cli
+
+# Install the toolmaker in your project
+npm install @opkt/toolmaker
+```
+
+2. Create a new tool:
+
+```bash
+openkit init
+```
+
+3. Build and publish:
+
+```bash
+openkit build
+openkit publish
+```

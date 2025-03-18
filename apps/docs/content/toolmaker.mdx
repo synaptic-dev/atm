@@ -1,0 +1,284 @@
+---
+title: Toolmaker SDK
+---
+
+# Toolmaker SDK
+
+With Toolmaker SDK, you can create both single-capability and multi-capability tools, offering a structured and scalable approach to building tools for AI agents. This flexibility ensures that your tools are not only robust and well-organized but also fully compatible with the OpenAI SDK, enabling seamless integration and enhanced functionality.
+
+## Installation
+
+```bash
+npm install @opkt/toolmaker
+```
+
+## Quick Start
+
+### Single-Capability Tool
+
+The simplest way to create a tool with a single capability:
+
+```typescript
+import { z } from "zod";
+import { Tool } from "@opkt/toolmaker";
+
+// Define a single-capability tool directly
+const getCurrentTime = new Tool({
+  name: "CurrentTime",
+  description: "A tool that returns the current time",
+  schema: z.object({
+    timezone: z
+      .string()
+      .optional()
+      .describe("Optional timezone (defaults to UTC)"),
+  }),
+  runner: async (params) => {
+    const now = new Date();
+    let timeString;
+
+    if (params.timezone) {
+      try {
+        timeString = now.toLocaleString("en-US", { timeZone: params.timezone });
+      } catch (e) {
+        timeString = now.toISOString();
+      }
+    } else {
+      timeString = now.toISOString();
+    }
+
+    return {
+      currentTime: timeString,
+      timestamp: now.getTime(),
+    };
+  },
+});
+
+export default getCurrentTime;
+```
+
+### Multi-Capability Tool
+
+For tools with multiple capabilities:
+
+```typescript
+import { z } from "zod";
+import { Tool, ToolCapability } from "@opkt/toolmaker";
+
+// Schema for read email
+const readEmailSchema = z
+  .object({
+    folder: z.string().default("inbox").describe("Email folder to read from"),
+  })
+  .describe("Parameters for reading emails");
+
+// Capability: Read Email
+const readEmail = new ToolCapability({
+  name: "ReadEmails",
+  description: "Retrieves emails from a specified folder",
+  schema: readEmailSchema,
+  runner: async (params) => {
+    // In a real implementation, this would connect to an email service
+    return {
+      emails: [
+        {
+          from: "john@example.com",
+          subject: "Hello",
+          preview: "This is a sample email",
+        },
+        {
+          from: "jane@example.com",
+          subject: "Meeting",
+          preview: "Let's meet tomorrow",
+        },
+      ],
+    };
+  },
+});
+
+const sendEmailSchema = z
+  .object({
+    to: z.string().describe("Recipient email address"),
+    subject: z.string().describe("Email subject line"),
+    body: z.string().describe("Email body content"),
+  })
+  .describe("Parameters for sending an email");
+
+// Capability: Send Email
+const sendEmail = new ToolCapability({
+  name: "SendEmail",
+  description: "Sends an email to a recipient",
+  schema: sendEmailSchema,
+  runner: async (params) => {
+    // In a real implementation, this would send an email
+    return {
+      success: true,
+      message: `Email sent to ${params.to}`,
+    };
+  },
+});
+
+// Create a multi-capability email tool
+const emailTool = new Tool({
+  name: "Email Tool",
+  description: "A simple tool for reading and sending emails",
+  capabilities: [readEmail, sendEmail],
+});
+
+export default emailTool;
+```
+
+## Using with OpenAI
+
+Toolmaker SDK ensures that the tools you create are fully compatible with OpenAI's function calling API. This compatibility allows you to seamlessly integrate your tools into AI systems, enhancing their capabilities and functionality.
+
+```typescript
+import OpenAI from 'openai';
+
+const openai = new OpenAI();
+
+async function() {
+  const response = await openai.createChatCompletion({
+    model: 'gpt-4o',
+    messages: [
+      { role: 'system', content: 'You are a helpful assistant.' },
+      { role: 'user', content: 'Check my inbox for new emails.' }
+    ],
+    tools: [emailTool.openai()],
+  });
+}
+
+```
+
+## Handling Tool Calls - Toolkit
+
+With Toolkit, you can group multiple tools together and handle tool call requests from AI in a very easy way. The `Toolkit` provides a `handler` method that processes tool call requests from AI, making it easier to manage and execute tool capabilities. The `handler` method returns an array of OpenAI-compatible tool call messages, which can be directly passed back to AI as chat messages.
+
+### Example Usage
+
+```typescript
+import { Toolkit } from '@opkt/toolmaker';
+
+const toolkit = new Toolkit({
+  tools: [tool1, tool2, tool3]
+});
+
+const response = await openai.createChatCompletion({
+    ...,
+    tools: [toolkit.openai()],
+  });
+
+// Process a single message with tool calls
+const toolResponses = await toolkit.handler({
+  message: chatCompletionMessage
+});
+
+// Or process a ChatCompletion object
+const toolResponses = await toolkit.handler({
+  chatCompletion: chatCompletionObject
+});
+```
+
+## Core Concepts
+
+### Tool
+
+The `Tool` class is the main container for AI Agent tool and supports two patterns:
+
+#### Single-Capability Pattern
+
+```typescript
+// Create a tool with a single capability
+const singleCapabilityTool = new Tool({
+  name: string,             // Display name of your tool
+  description: string,      // What your tool does
+  schema: ZodType,          // Input parameters schema
+  runner: async Function    // Function that executes the capability
+});
+```
+
+#### Multi-Capability Pattern
+
+```typescript
+// Create a tool with multiple capabilities
+const multiCapabilityTool = new Tool({
+  name: string,              // Display name of your tool
+  description: string,       // What your tool does
+  capabilities?: ToolCapability[] // Optional array of capabilities
+});
+```
+
+Methods:
+
+- `getCapabilities()`: Returns all capabilities of the tool
+- `getName()`: Returns the tool's name
+- `getDescription()`: Returns the tool's description
+- `openai()`: Transforms capabilities into OpenAI function format
+
+### ToolCapability
+
+`ToolCapability` represents a specific function your tool can perform:
+
+```typescript
+const capability = new ToolCapability({
+  name: string,        // Name of the capability
+  description: string, // What this capability does
+  schema: ZodType,     // Input parameters schema
+  runner: async Function     // Async function that executes the capability
+});
+```
+
+Key features:
+
+- Type-safe input validation using Zod schemas
+- Automatic JSON Schema generation for AI consumption
+- Built-in TypeScript support
+
+### Toolkit
+
+A `Toolkit` is a collection of tools that can be managed and used together. It allows you to group related tools and capabilities, making it easier to organize and deploy them.
+
+```typescript
+const toolkit = new Toolkit({
+  tools: [tool1, tool2, tool3], // Array of Tool instances
+});
+```
+
+Methods:
+
+- `openai()`: Returns OpenAI fully compatible grouped tools for the OpenAI SDK.
+- `handler()`: Automatically handles the tool calls belonging to the grouped tools.
+
+## Naming Conventions
+
+When your tools are used with AI systems like OpenAI:
+
+- **Single-capability tools**: Function names are formatted as just `tool_name` in snake_case
+- **Multi-capability tools**: Function names are formatted as `tool_name-capability_name` in snake_case
+- Spaces in names are replaced with underscores
+- The handler method parses these function names to locate and execute the right capability automatically
+
+## Building and Sharing
+
+You can share your tools on the OpenKit marketplace at [openkit.fun](https://openkit.fun) using the OpenKit CLI. This allows other AI Agent developers to discover and use your tools.
+
+```bash
+npm install -g @opkt/cli
+```
+
+1. First, authenticate with OpenKit:
+
+```bash
+openkit login
+```
+
+2. Build your tool:
+
+```bash
+openkit build
+```
+
+3. Publish to OpenKit:
+
+```bash
+openkit publish
+```

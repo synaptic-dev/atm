@@ -1,0 +1,87 @@
+---
+title: OpenKit CLI
+---
+
+# OpenKit CLI
+
+OpenKit CLI helps you build and publish your tools with simple commands. Whether you're building a calculator, a text analyzer, or any other AI Agent tools, OpenKit CLI makes it easy to share your tools.
+
+Learn more at [OpenKit](https://openkit.fun)
+
+## Installation
+
+You'll need two packages:
+
+- `@opkt/cli` - The CLI tool for building and publishing
+- `@opkt/toolmaker` - The SDK for creating tools
+
+```bash
+# Install the CLI globally
+npm install -g @opkt/cli
+
+# Install the toolmaker in your project
+npm install @opkt/toolmaker
+```
+
+## Commands
+
+- `openkit login` - Authenticate with OpenKit
+- `openkit init` - Create a new tool from template
+- `openkit build` - Build your tool for publishing
+- `openkit publish` - Publish your tool to OpenKit
+
+## Usage
+
+### Login
+
+Before using OpenKit commands, you need to login to OpenKit:
+
+```bash
+openkit login
+```
+
+### Quick Start
+
+For a faster setup, you can use our quick template:
+
+```bash
+openkit init
+```
+
+This will create a new directory with a pre-configured tool structure and example capability.
+
+For more detailed information on creating tools, visit the [Toolmaker SDK documentation](/toolmaker).
+
+### Publishing a Tool
+
+To publish a tool to OpenKit:
+
+1. First, build your tool:
+
+```bash
+openkit build
+```
+
+2. Then publish it:
+
+```bash
+openkit publish
+```
+
+The tool will be published to OpenKit, and you'll receive a URL where you can view your published tool on [OpenKit](https://openkit.fun).
+
+### Build Output Details
+
+When you run `openkit build`, the output is generated in the `openkit-dist` directory by default. The built output includes the capabilities defined by Zod schemas and runner functions. By default, the build process looks for an `index.ts` file in the same folder.
+
+- You can specify a different path by using `openkit build [path]`.
+- The `index.ts` must export a default `Tool` or `Toolkit` instance.
+
+For a `Tool` instance, the `openkit-dist` structure is:
+
+- `openkit-dist/[toolname]/capabilities`
+
+For a `Toolkit` instance, the `openkit-dist` structure is:
+
+- `openkit-dist/[toolname-a]/capabilities`
+- `openkit-dist/[toolname-b]/capabilities`
