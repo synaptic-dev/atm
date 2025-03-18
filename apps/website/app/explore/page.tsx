@@ -1,8 +1,8 @@
 import { createClient } from "@/services/supabase/server";
 import ToolCard from "@/components/tool-card";
-import { Search } from "lucide-react";
 import { type Database } from "@/types/supabase";
 import CategoriesFilter from "./categories-filter";
+import SearchForm from "./search-form";
 
 // Define the tool categories enum and values
 type ToolCategory = Database["public"]["Enums"]["tool_categories"];
@@ -23,16 +23,22 @@ const TOOL_CATEGORIES: ToolCategory[] = [
 export default async function ExplorePage({
   searchParams,
 }: {
-  searchParams: Promise<{ category?: string }>;
+  searchParams: Promise<{ category?: string; search?: string }>;
 }) {
   const supabase = await createClient();
 
-  // Get the selected category from URL parameters
-  const { category } = await searchParams;
+  // Get the selected category and search query from URL parameters
+  const { category, search } = await searchParams;
   const selectedCategory = category as ToolCategory | undefined;
+  const searchQuery = search as string | undefined;
 
   // Query with optional category filter
   let query = supabase.from("tools").select("*");
+
+  // Apply search filter if specified
+  if (searchQuery) {
+    query = query.textSearch("name", `'${searchQuery}'`);
+  }
 
   // Apply category filter if specified
   if (selectedCategory) {
@@ -53,11 +59,8 @@ export default async function ExplorePage({
           </p>
 
           <div className="flex flex-col md:flex-row gap-4 items-start md:justify-between">
-            {/* Future search functionality could go here */}
-            <div className="h-10 w-full md:w-1/2 lg:w-1/3 bg-muted/40 border border-border/50 rounded-lg flex items-center px-3 text-muted-foreground">
-              <Search className="h-4 w-4 mr-2" />
-              <span>Search coming soon...</span>
-            </div>
+            {/* Search input */}
+            <SearchForm initialQuery={searchQuery} />
 
             {/* Categories filter */}
             <CategoriesFilter

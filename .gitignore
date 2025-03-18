@@ -11,6 +11,7 @@ node_modules
 .env.development.local
 .env.test.local
 .env.production.local
+.env.*
 
 # Testing
 coverage
@@ -37,3 +38,7 @@ yarn-error.log*
 # Misc
 .DS_Store
 *.pem
+
+# Wrangler
+wrangler.jsonc
+wrangler.toml
