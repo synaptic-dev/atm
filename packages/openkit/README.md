@@ -1,15 +1,11 @@
 # OpenKit SDK
 
-OpenKit SDK enables developers to build headless apps for AI agents.
+OpenKit SDK enables developers to build headless Apps-For-AI.
 
 ## Installation
 
 ```bash
 npm install @opkt/openkit
-# or
-pnpm add @opkt/openkit
-# or
-yarn add @opkt/openkit
 ```
 
 ## Quick Start
@@ -24,15 +20,16 @@ import openkit from "@opkt/openkit";
 
 // Create an app
 const timeApp = openkit.app({
-  name: "CurrentTime",
+  name: "Time",
   description: "An app that returns the current time",
 });
 
 // Add a route to the app
 timeApp
   .route({
-    name: "Get",
+    name: "Get Time",
     description: "Get the current time",
+    path: "get-time",
   })
   .input(
     z.object({
@@ -63,7 +60,7 @@ timeApp
   });
 
 // Execute the route
-const result = await timeApp.run("Get").handler({
+const result = await timeApp.run("/get-time").handler({
   input: { timezone: "America/New_York" },
 });
 
@@ -93,6 +90,7 @@ const pokemonApp = openkit
   .route({
     name: "Capture",
     description: "Capture a random Pokemon",
+    path: "capture",
   })
   .input(
     z.object({
@@ -116,6 +114,7 @@ const pokemonApp = openkit
   .route({
     name: "Location",
     description: "Get information about Pokemon locations",
+    path: "location",
   })
   .input(
     z.object({
@@ -130,11 +129,11 @@ const pokemonApp = openkit
   });
 
 // Execute routes
-const captureResult = await pokemonApp.run("Capture").handler({
+const captureResult = await pokemonApp.run("/capture").handler({
   input: { id: 25 }, // Pikachu
 });
 
-const locationResult = await pokemonApp.run("Location").handler({
+const locationResult = await pokemonApp.run("/location").handler({
   input: { region: "kanto" },
 });
 ```
@@ -178,12 +177,116 @@ if (response.choices[0].message.tool_calls) {
 }
 ```
 
+## LLM Response Formatting
+
+You can customize how your app formats responses for LLMs:
+
+```typescript
+const weatherApp = openkit
+  .app({
+    name: "Weather",
+    description: "Get weather information",
+  })
+  .route({
+    name: "Forecast",
+    description: "Get weather forecast",
+    path: "forecast",
+  })
+  .input(
+    z.object({
+      location: z.string().describe("Location for forecast"),
+      days: z.number().optional().describe("Number of days to forecast"),
+    }),
+  )
+  .handler(async ({ input }) => {
+    return {
+      location: input.location,
+      forecast: "Sunny",
+      temperature: 72,
+    };
+  })
+  .llm({
+    success: (result) => {
+      return `Weather in ${result.location}: ${result.forecast}, ${result.temperature}°F`;
+    },
+    error: (error) => {
+      return `Error getting weather forecast: ${error.message}`;
+    },
+  });
+```
+
+## Input and Output Validation
+
+OpenKit uses Zod for input and output validation:
+
+```typescript
+const validatedApp = openkit
+  .app({
+    name: "Validated",
+    description: "An app with validation",
+  })
+  .route({
+    name: "Validate",
+    description: "Validates input and output",
+    path: "validate",
+  })
+  .input(
+    z.object({
+      email: z.string().email(),
+      age: z.number().min(18),
+    }),
+  )
+  .output(
+    z.object({
+      verified: z.boolean(),
+      data: z.object({
+        id: z.string().uuid(),
+        timestamp: z.number(),
+      }),
+    }),
+  )
+  .handler(async ({ input }) => {
+    return {
+      verified: true,
+      data: {
+        id: "123e4567-e89b-12d3-a456-426614174000",
+        timestamp: Date.now(),
+      },
+    };
+  });
+```
+
+## Debugging
+
+Enable debug mode to see detailed logs during development:
+
+```typescript
+const app = openkit
+  .app({
+    name: "MyApp",
+    description: "My test app",
+  })
+  .debug() // Enable debug mode for the app
+  .route({
+    name: "MyRoute",
+    description: "Test route",
+    path: "/test",
+  })
+  .handler(async () => {
+    return { status: "ok" };
+  })
+  .debug(); // Enable debug mode for this specific route
+```
+
 ## Key Concepts
 
 - **App**: The top-level container for your functionality.
 - **Routes**: Every app contains at least one route, which represents a specific function.
 - **Context**: Shared data and dependencies for your routes.
 - **Middleware**: Functions that can modify the input, output, or execution flow.
+- **Input/Output Validation**: Define and validate your input and output shapes with Zod.
+- **LLM Formatting**: Customize how your app formats responses for LLMs.
+- **Debug**: Enable detailed logging for development and troubleshooting.
 
 ## For more information
 
