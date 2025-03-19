@@ -5,31 +5,31 @@ import {
 } from "../types";
 
 /**
- * OpenAI adapter for converting tools to OpenAI function calling format
+ * OpenAI adapter for converting apps to OpenAI function calling format
  */
 export class OpenAIAdapter {
-  private _tools: any[];
+  private _apps: any[];
 
   /**
    * Create a new OpenAI adapter
    * @param options OpenAI adapter options
    */
   constructor(options: OpenAIAdapterOptions) {
-    this._tools = options.tools;
+    this._apps = options.apps;
   }
 
   /**
-   * Get OpenAI function definitions for all tools
+   * Get OpenAI function definitions for all apps
    * @returns Array of OpenAI function definitions
    */
   tools(): OpenAIChatCompletionTool[] {
-    // Collect function definitions from all tools
+    // Collect function definitions from all apps
     const allDefinitions: OpenAIChatCompletionTool[] = [];
 
-    for (const tool of this._tools) {
-      // Each tool has its own way to generate OpenAI functions
-      if (typeof tool.getOpenAIFunctions === "function") {
-        const functions = tool.getOpenAIFunctions();
+    for (const app of this._apps) {
+      // Each app has its own way to generate OpenAI functions
+      if (typeof app.getOpenAIFunctions === "function") {
+        const functions = app.getOpenAIFunctions();
         allDefinitions.push(...functions);
       }
     }
@@ -65,13 +65,13 @@ export class OpenAIAdapter {
         // Parse arguments
         const args = JSON.parse(argsStr);
 
-        // Find the right tool and execute
+        // Find the right app and execute
         let response: any = null;
 
-        for (const tool of this._tools) {
-          if (typeof tool.handleToolCall === "function") {
-            // Try to handle with this tool
-            const handled = await tool.handleToolCall(name, args);
+        for (const app of this._apps) {
+          if (typeof app.handleToolCall === "function") {
+            // Try to handle with this app
+            const handled = await app.handleToolCall(name, args);
             if (handled !== undefined) {
               response = handled;
               break;

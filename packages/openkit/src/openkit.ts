@@ -1,22 +1,37 @@
-import { ToolBuilder } from "./builders/tool-builder";
+import { AppBuilder } from "./builders/app-builder";
+import { RouteBuilder } from "./builders/route-builder";
 import { OpenAIAdapter } from "./builders/openai-adapter";
-import { ToolBuilderOptions, OpenAIAdapterOptions } from "./builders/types";
+import {
+  AppBuilderOptions,
+  AppRunResult,
+  OpenAIAdapterOptions,
+  RouteBuilderOptions,
+} from "./builders/types";
 
 /**
- * OpenKit main entry point for the fluent builder API
+ * Main OpenKit class to create and manage apps
  */
-export const openkit = {
+export class OpenKit {
   /**
-   * Create a new tool using the builder pattern
-   * @param options Tool configuration options
+   * Create a new app
+   * @param options App configuration
+   * @returns AppBuilder instance
    */
-  tool: (options: ToolBuilderOptions) => new ToolBuilder(options),
+  app<T = any>(options: AppBuilderOptions): AppBuilder {
+    return new AppBuilder(options);
+  }
 
   /**
-   * Create an OpenAI adapter for the specified tools
-   * @param options OpenAI adapter options
+   * Create an OpenAI adapter for function calling
+   * @param options OpenAI adapter configuration
+   * @returns OpenAIAdapter instance
    */
-  openai: (options: OpenAIAdapterOptions) => new OpenAIAdapter(options),
-};
+  openai(options: OpenAIAdapterOptions): OpenAIAdapter {
+    const { apps } = options;
+    return new OpenAIAdapter({ apps });
+  }
+}
 
+// Export a singleton instance
+export const openkit = new OpenKit();
 export default openkit;

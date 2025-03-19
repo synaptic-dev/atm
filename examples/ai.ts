@@ -2,7 +2,7 @@ import { OpenAI } from "openai";
 import type { ChatCompletionMessageParam } from "openai/resources/chat";
 import dotenv from "dotenv";
 import openkit from "@opkt/openkit";
-import pokemonTool from "./tools/pokemon";
+import pokemonApp from "./apps-for-ai/pokemon";
 import readline from "readline";
 
 dotenv.config();
@@ -15,7 +15,7 @@ const openai = new OpenAI({
 
 // Create an OpenKit toolkit with the pokemon tool
 const toolkit = openkit.openai({
-  tools: [pokemonTool],
+  apps: [pokemonApp],
 });
 
 // Create a readline interface for CLI interaction

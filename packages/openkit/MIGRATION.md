@@ -1,314 +1,207 @@
-# OpenKit Migration Guide
+# OpenKit API Guide
 
-This guide helps you migrate from OpenKit v0.x (class-based API) to v1.x (fluent builder API).
+This guide details the OpenKit API design and terminology.
 
-## Overview of Changes
+## Terminology
 
-OpenKit v1.0 introduces a new fluent builder API that:
+OpenKit uses terminology that aligns with modern web development patterns:
 
-- Uses a chainable interface for defining tools and capabilities
-- Adds input and output validation
-- Supports middleware for cross-cutting concerns
-- Provides direct invocation for testing and local usage
-- Maintains backward compatibility with the v0.x API
+- **App**: The top-level container for functionality (similar to an application in web frameworks)
+- **Route**: An explicit function within an app (similar to routes/endpoints in web frameworks)
 
-## Migration Steps
+## Core Principle: Explicit Routes
 
-### Step 1: Update Import
+In OpenKit, every app must have at least one explicit route. There are no "implicit" or "single-route" apps.
 
-**v0.x:**
+## API Structure
 
-```typescript
-import { Tool, ToolCapability, Toolkit } from "@opkt/openkit";
-```
+### Creating an App with Routes
 
-**v1.x:**
+Every app must have at least one explicitly defined route:
 
 ```typescript
-// For new API
-import { openkit } from "@opkt/openkit";
+import { z } from "zod";
+import openkit from "@opkt/openkit";
 
-// For compatibility with existing code
-import { Tool, ToolCapability, Toolkit } from "@opkt/openkit";
-```
-
-### Step 2: Migrate Single-Capability Tools
-
-**v0.x:**
-
-```typescript
-const greetingTool = new Tool({
-  name: "Greeting",
-  description: "A simple greeting tool",
-  schema: z.object({
-    name: z.string().describe("Name of the person to greet"),
-  }),
-  runner: async (params) => {
-    return {
-      message: `Hello, ${params.name}!`,
-      timestamp: new Date().toISOString(),
-    };
-  },
+// Create an app
+const myApp = openkit.app({
+  name: "MyApp",
+  description: "An app that does something",
 });
-```
 
-**v1.x:**
-
-```typescript
-const greetingTool = openkit
-  .tool({
-    name: "Greeting",
-    description: "A simple greeting tool",
+// Add an explicit route
+myApp
+  .route({
+    name: "DoSomething",
+    description: "Does something useful",
   })
   .input(
     z.object({
-      name: z.string().describe("Name of the person to greet"),
-    }),
-  )
-  .output(
-    z.object({
-      message: z.string(),
-      timestamp: z.string(),
+      parameter: z.string(),
     }),
   )
   .handler(async ({ input }) => {
-    return {
-      message: `Hello, ${input.name}!`,
-      timestamp: new Date().toISOString(),
-    };
+    return { result: `Processed: ${input.parameter}` };
   });
 ```
 
-Key differences:
+### Convenience Method
 
-- `schema` becomes `.input()`
-- `runner` becomes `.handler()`
-- Handler receives `{ input, context }` object instead of direct params
-- Optional output validation with `.output()`
-
-### Step 3: Migrate Multi-Capability Tools
-
-**v0.x:**
+For simplicity when creating single-route apps, you can use a fluent interface:
 
 ```typescript
-const greetCapability = new ToolCapability({
-  name: "Greet",
-  description: "Greets a person by name",
-  schema: greetSchema,
-  runner: async (params) => {
-    return {
-      message: `Hello, ${params.name}!`,
-      timestamp: new Date().toISOString(),
-    };
-  },
-});
-
-const farewellCapability = new ToolCapability({
-  name: "Farewell",
-  description: "Says goodbye to a person",
-  schema: greetSchema,
-  runner: async (params) => {
-    return {
-      message: `Goodbye, ${params.name}!`,
-      timestamp: new Date().toISOString(),
-    };
-  },
-});
-
-const multiCapabilityTool = new Tool({
-  name: "Hello World",
-  description: "A tool with greeting capabilities",
-  capabilities: [greetCapability, farewellCapability],
-});
-```
-
-**v1.x:**
-
-```typescript
-const multiCapabilityTool = openkit
-  .tool({
-    name: "Hello World",
-    description: "A tool with greeting capabilities",
+const echoApp = openkit
+  .app({
+    name: "Echo",
+    description: "An echo app",
   })
-  .capability({
-    name: "Greet",
-    description: "Greets a person by name",
+  .route({
+    name: "Message",
+    description: "Echoes a message back",
   })
-  .input(greetSchema)
-  .output(
-    z.object({
-      message: z.string(),
-      timestamp: z.string(),
-    }),
-  )
+  .input(z.object({ message: z.string() }))
   .handler(async ({ input }) => {
-    return {
-      message: `Hello, ${input.name}!`,
-      timestamp: new Date().toISOString(),
-    };
-  })
-  .capability({
-    name: "Farewell",
-    description: "Says goodbye to a person",
-  })
-  .input(greetSchema)
-  .output(
-    z.object({
-      message: z.string(),
-      timestamp: z.string(),
-    }),
-  )
-  .handler(async ({ input }) => {
-    return {
-      message: `Goodbye, ${input.name}!`,
-      timestamp: new Date().toISOString(),
-    };
+    return { echo: input.message };
   });
+
+// Execute the route
+const result = await echoApp.run("Message").handler({
+  input: { message: "Hello world" },
+});
 ```
 
-Key differences:
+## Using Apps
 
-- Capabilities are defined inline with `.capability()`
-- No need to create separate `ToolCapability` instances
-- Each capability has its own chain of `.input()`, `.output()`, and `.handler()`
+### Executing Routes
 
-### Step 4: Migrate OpenAI Integration
-
-**v0.x:**
+All route execution is done explicitly by name:
 
 ```typescript
-const toolkit = new Toolkit({
-  tools: [greetingTool, weatherTool],
+// Execute a route by name
+const result = await myApp.run("DoSomething").handler({
+  input: { parameter: "test-value" },
+});
+```
+
+### Using Context
+
+```typescript
+// Setting app-level context
+const appWithContext = openkit
+  .app({
+    name: "ContextApp",
+    description: "App that uses context",
+  })
+  .context({
+    multiplier: 10,
+  })
+  .route({
+    name: "Multiply",
+    description: "Multiplies a number by the context multiplier",
+  })
+  .input(
+    z.object({
+      value: z.number(),
+    }),
+  )
+  .handler(async ({ input, context }) => {
+    return { result: input.value * context.multiplier };
+  });
+
+// Providing context at runtime
+const result = await appWithContext.run("Multiply").handler({
+  input: { value: 5 },
+  context: { additionalValue: 20 },
+});
+```
+
+## OpenAI Integration
+
+OpenKit integrates seamlessly with OpenAI's function calling:
+
+```typescript
+// Create an OpenAI adapter with your apps
+const oai = openkit.openai({ apps: [myApp, anotherApp] });
+
+// Get tool definitions for OpenAI API
+const tools = oai.tools();
+
+// Use with OpenAI
+const openaiResponse = await openai.chat.completions.create({
+  model: "gpt-4-turbo",
+  messages: [{ role: "user", content: "Help me use these apps" }],
+  tools: tools,
 });
 
-// Integration with OpenAI
-const functions = toolkit.openai();
-const responses = await toolkit.handler({ message: chatCompletionMessage });
+// Handle tool calls
+if (openaiResponse.choices[0].message.tool_calls) {
+  const toolResults = await oai.handler({ chatCompletion: openaiResponse });
+
+  // Continue the conversation
+  // ...
+}
 ```
 
-**v1.x:**
+## Key Features
+
+- **Input Validation**: Uses Zod schemas to validate input
+- **Output Validation**: Optional output validation
+- **Middleware**: Add cross-cutting concerns to your routes
+- **LLM Formatting**: Custom formatting for LLM responses
+- **Context**: Share data and dependencies between routes
+- **Debugging**: Enable debug mode to see detailed logs
+
+## Example: Complete App
 
 ```typescript
-const toolkit = openkit.openai({
-  tools: [greetingTool, weatherTool],
-});
+import { z } from "zod";
+import openkit from "@opkt/openkit";
 
-// Integration with OpenAI
-const functions = toolkit.tools();
-const responses = await toolkit.handler({ message: chatCompletionMessage });
-```
-
-Key differences:
-
-- `new Toolkit()` becomes `openkit.openai()`
-- `toolkit.openai()` becomes `toolkit.tools()`
-
-### Step 5: Add New Features (Optional)
-
-#### Middleware
-
-Add authentication, logging, or other cross-cutting concerns:
-
-```typescript
-// Define middleware
-const authMiddleware = async (context, next) => {
-  if (!context.apiKey) {
-    throw new Error("API key required");
-  }
-  return next();
-};
-
-// Use middleware in your tool
-const weatherTool = openkit
-  .tool({
+// Define a multi-route app
+const weatherApp = openkit
+  .app({
     name: "Weather",
     description: "Get weather information",
   })
-  .use(authMiddleware)
-  .input(weatherSchema)
+  .context({ apiKey: "weather-api-key" })
+  .route({
+    name: "Current",
+    description: "Get current weather",
+  })
+  .input(
+    z.object({
+      location: z.string().describe("Location to get weather for"),
+    }),
+  )
   .handler(async ({ input, context }) => {
-    // Access context populated by middleware
-    console.log(`Authenticated user: ${context.user.id}`);
-    // Handle request
+    // Use context.apiKey to fetch from weather API
+    return {
+      temperature: 72,
+      conditions: "sunny",
+      location: input.location,
+    };
+  })
+  .route({
+    name: "Forecast",
+    description: "Get weather forecast",
+  })
+  .input(
+    z.object({
+      location: z.string(),
+      days: z.number().int().min(1).max(7).default(3),
+    }),
+  )
+  .handler(async ({ input, context }) => {
+    // Implementation
+    return {
+      forecast: [
+        { day: 1, temperature: 72, conditions: "sunny" },
+        { day: 2, temperature: 70, conditions: "partly cloudy" },
+        { day: 3, temperature: 68, conditions: "cloudy" },
+      ],
+      location: input.location,
+    };
   });
+
+export default weatherApp;
 ```
-
-#### Direct Invocation
-
-Test your tools directly without going through OpenAI:
-
-```typescript
-// For single-capability tools
-const result = await weatherTool.run().handler({
-  input: { location: "San Francisco" },
-  context: { apiKey: "valid-key" },
-});
-
-// For multi-capability tools
-const result = await multiCapabilityTool.run("Greet").handler({
-  input: { name: "World" },
-  context: {},
-});
-```
-
-## Compatibility Notes
-
-- The v0.x API remains fully functional in v1.0
-- Tools created with either API can be used together
-- The OpenAI adapter accepts both types of tools
-- Future releases may deprecate the v0.x API
-
-## Common Issues
-
-### Handler Signature
-
-The handler function now receives an object with `input` and `context` properties:
-
-```typescript
-// v0.x
-runner: async (params) => {
-  /* use params directly */
-};
-
-// v1.x
-handler: async ({ input, context }) => {
-  /* use input and context */
-};
-```
-
-### Type Safety
-
-Ensure your TypeScript version is up to date to benefit from the enhanced type inference:
-
-```typescript
-// With type inference
-.input(z.object({ query: z.string() }))
-.handler(async ({ input }) => {
-  // input.query is typed as string
-  return { result: input.query.toUpperCase() };
-})
-```
-
-### Context is Optional
-
-When invoking tools directly, the context object is optional:
-
-```typescript
-// With context
-await tool.run().handler({
-  input: { ... },
-  context: { ... }
-});
-
-// Without context
-await tool.run().handler({
-  input: { ... }
-});
-```
-
-## Example Migration
-
-For complete examples of migrated code, see:
-
-- `examples/v0-api.ts` - Original class-based API
-- `examples/new-api.ts` - New fluent builder API

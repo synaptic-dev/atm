@@ -1,257 +1,190 @@
-# @opkt/openkit
+# OpenKit SDK
 
-OpenKit Toolmaker provides a type-safe way to define agent tools using Zod schemas and TypeScript.
+OpenKit SDK enables developers to build headless apps for AI agents.
 
 ## Installation
 
 ```bash
 npm install @opkt/openkit
+# or
+pnpm add @opkt/openkit
+# or
+yarn add @opkt/openkit
 ```
 
 ## Quick Start
 
-### Single-Capability Tool
+### Creating an App with a Route
 
-The simplest way to create a tool with a single capability:
+Every app in OpenKit must have at least one route:
 
 ```typescript
 import { z } from "zod";
-import { Tool } from "@opkt/openkit";
+import openkit from "@opkt/openkit";
 
-// Define a single-capability tool directly
-const greetingTool = new Tool({
-  name: "Greeting",
-  description: "A simple greeting tool",
-  schema: z.object({
-    name: z.string().describe("Name of the person to greet"),
-  }),
-  runner: async (params) => {
-    return {
-      message: `Hello, ${params.name}!`,
-      timestamp: new Date().toISOString(),
-    };
-  },
+// Create an app
+const timeApp = openkit.app({
+  name: "CurrentTime",
+  description: "An app that returns the current time",
 });
 
-export default greetingTool;
-```
-
-### Multi-Capability Tool
-
-For tools with multiple capabilities:
-
-```typescript
-import { z } from "zod";
-import { Tool, ToolCapability } from "@opkt/openkit";
-
-// Define your input schema
-const greetSchema = z
-  .object({
-    name: z.string().describe("Name of the person to greet"),
+// Add a route to the app
+timeApp
+  .route({
+    name: "Get",
+    description: "Get the current time",
   })
-  .describe("Parameters for greeting");
+  .input(
+    z.object({
+      timezone: z
+        .string()
+        .optional()
+        .describe("Optional timezone (defaults to UTC)"),
+    }),
+  )
+  .handler(async ({ input }) => {
+    const now = new Date();
+    let timeString;
 
-// Create capability instances
-const greetCapability = new ToolCapability({
-  name: "Greet",
-  description: "Greets a person by name",
-  schema: greetSchema,
-  runner: async (params) => {
+    if (input.timezone) {
+      try {
+        timeString = now.toLocaleString("en-US", { timeZone: input.timezone });
+      } catch (e) {
+        timeString = now.toISOString();
+      }
+    } else {
+      timeString = now.toISOString();
+    }
+
     return {
-      message: `Hello, ${params.name}!`,
-      timestamp: new Date().toISOString(),
+      currentTime: timeString,
+      timestamp: now.getTime(),
     };
-  },
+  });
+
+// Execute the route
+const result = await timeApp.run("Get").handler({
+  input: { timezone: "America/New_York" },
 });
 
-const farewellCapability = new ToolCapability({
-  name: "Farewell",
-  description: "Says goodbye to a person",
-  schema: greetSchema, // reusing the same schema
-  runner: async (params) => {
-    return {
-      message: `Goodbye, ${params.name}!`,
-      timestamp: new Date().toISOString(),
-    };
-  },
-});
-
-// Create a multi-capability tool with all capabilities
-const multiCapabilityTool = new Tool({
-  name: "Hello World",
-  description: "A simple tool with greeting capabilities",
-  capabilities: [greetCapability, farewellCapability],
-});
-
-export default multiCapabilityTool;
+console.log(result);
+// Output: { currentTime: "5/16/2024, 10:30:45 AM", timestamp: 1716024645000 }
 ```
 
-## Core Concepts
+### Multi-Route App
 
-### Tool
-
-The `Tool` class is the main container for your AI tool and supports two patterns:
-
-#### Single-Capability Pattern
+Create an app with multiple routes:
 
 ```typescript
-// Create a tool with a single capability
-const singleCapabilityTool = new Tool({
-  name: string,             // Display name of your tool
-  description: string,      // What your tool does
-  schema: ZodType,          // Input parameters schema
-  runner: async Function    // Function that executes the capability
+import { z } from "zod";
+import openkit from "@opkt/openkit";
+import axios from "axios";
+
+// Define the Pokemon app with multiple routes
+const pokemonApp = openkit
+  .app({
+    name: "Pokemon",
+    description: "App for working with Pokemon data from PokeAPI",
+  })
+  .context({
+    apiBaseUrl: "https://pokeapi.co/api/v2",
+  })
+  // Capture route
+  .route({
+    name: "Capture",
+    description: "Capture a random Pokemon",
+  })
+  .input(
+    z.object({
+      id: z
+        .number()
+        .int()
+        .min(1)
+        .max(1025)
+        .optional()
+        .describe("Optional Pokemon ID to capture"),
+    }),
+  )
+  .handler(async ({ input, context }) => {
+    const pokemonId = input.id || Math.floor(Math.random() * 1025) + 1;
+    const response = await axios.get(
+      `${context.apiBaseUrl}/pokemon/${pokemonId}`,
+    );
+    return response.data;
+  })
+  // Location route
+  .route({
+    name: "Location",
+    description: "Get information about Pokemon locations",
+  })
+  .input(
+    z.object({
+      region: z.string().describe("The region to get location information for"),
+    }),
+  )
+  .handler(async ({ input, context }) => {
+    const response = await axios.get(
+      `${context.apiBaseUrl}/location/${input.region}`,
+    );
+    return response.data;
+  });
+
+// Execute routes
+const captureResult = await pokemonApp.run("Capture").handler({
+  input: { id: 25 }, // Pikachu
+});
+
+const locationResult = await pokemonApp.run("Location").handler({
+  input: { region: "kanto" },
 });
 ```
 
-#### Multi-Capability Pattern
+## Using with OpenAI
+
+OpenKit apps can be easily used with the OpenAI API:
 
 ```typescript
-// Create a tool with multiple capabilities
-const multiCapabilityTool = new Tool({
-  name: string,              // Display name of your tool
-  description: string,       // What your tool does
-  capabilities?: ToolCapability[] // Optional array of capabilities
-});
-```
+import { OpenAI } from "openai";
+import openkit from "@opkt/openkit";
+import myApp from "./my-app";
 
-Methods:
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-- `getCapabilities()`: Returns all capabilities of the tool
-- `getName()`: Returns the tool's name
-- `getDescription()`: Returns the tool's description
-- `openai()`: Transforms capabilities into OpenAI function format
+// Create an OpenAI adapter with your app
+const oai = openkit.openai({ apps: [myApp] });
 
-### ToolCapability
-
-`ToolCapability` represents a specific function your tool can perform:
-
-```typescript
-const capability = new ToolCapability({
-  name: string, // Name of the capability
-  description: string, // What this capability does
-  schema: ZodType, // Input parameters schema
-  runner: Function, // Async function that executes the capability
-});
-```
-
-Key features:
-
-- Type-safe input validation using Zod schemas
-- Automatic JSON Schema generation for AI consumption
-- Built-in TypeScript support
-
-### Toolkit
-
-The `Toolkit` class allows you to group multiple tools together:
-
-```typescript
-import { Toolkit } from "@opkt/openkit";
-
-const toolkit = new Toolkit({
-  tools: [tool1, tool2, tool3], // Array of Tool instances
-});
-```
-
-Methods:
-
-- `openai()`: Transforms all tool capabilities into OpenAI function format
-- `handler(params)`: Handles and processes tool calls from OpenAI
-- `getTools()`: Returns all tools in the toolkit
-- `addTool(tool)`: Add a new tool to the toolkit
-
-Processing tool calls:
-
-```typescript
-// Process a single message with tool calls
-const toolResponses = await toolkit.handler({
-  message: chatCompletionMessage,
+// Use the tools in your OpenAI call
+const response = await openai.chat.completions.create({
+  model: "gpt-4-turbo",
+  messages: [{ role: "user", content: "Can you help me use this tool?" }],
+  tools: oai.tools(),
 });
 
-// Or process a ChatCompletion object
-const toolResponses = await toolkit.handler({
-  chatCompletion: chatCompletionObject,
-});
+// Handle any tool calls
+if (response.choices[0].message.tool_calls) {
+  const toolResults = await oai.handler({ chatCompletion: response });
+
+  // Send the results back to continue the conversation
+  const continuedResponse = await openai.chat.completions.create({
+    model: "gpt-4-turbo",
+    messages: [
+      { role: "user", content: "Can you help me use this tool?" },
+      response.choices[0].message,
+      ...toolResults,
+    ],
+  });
+
+  console.log(continuedResponse.choices[0].message.content);
+}
 ```
 
-## Naming Conventions
+## Key Concepts
 
-When your tools are used with AI systems like OpenAI:
+- **App**: The top-level container for your functionality.
+- **Routes**: Every app contains at least one route, which represents a specific function.
+- **Context**: Shared data and dependencies for your routes.
+- **Middleware**: Functions that can modify the input, output, or execution flow.
 
-- **Single-capability tools**: Function names are formatted as just `tool_name` in snake_case
-- **Multi-capability tools**: Function names are formatted as `tool_name-capability_name` in snake_case
-- Spaces in names are replaced with underscores
-- The handler method parses these function names to locate and execute the right capability
+## For more information
 
-## Best Practices
-
-1. **Tool Design**
-
-   - Use the single-capability pattern for simple tools with one function
-   - Use the multi-capability pattern for complex tools with multiple related functions
-   - Set all capabilities at construction time
-
-2. **Schema Design**
-
-   - Use descriptive names for schema properties
-   - Add descriptions using `.describe()` for better AI understanding
-   - Keep schemas focused and single-purpose
-
-3. **Runner Implementation**
-   - Handle errors gracefully
-   - Return structured data
-   - Keep functions pure and side-effect free when possible
-
-## Directory Structure
-
-Recommended structure for your tool:
-
-```
-your-tool/
-├── src/
-│   ├── capabilities/
-│   │   └── greet/
-│   │       ├── schema.ts      # Input schema definition
-│   │       └── runner.ts      # Capability implementation
-│   └── index.ts              # Tool export
-```
-
-## TypeScript Support
-
-Toolmaker is written in TypeScript and provides full type definitions. You get:
-
-- Type inference for schemas
-- Autocomplete for tool and capability options
-- Type checking for runner functions
-
-## Building and Sharing
-
-Once you've created your tool, you can share it through the OpenKit CLI:
-
-```bash
-npm install -g @opkt/cli
-```
-
-1. First, authenticate with OpenKit:
-
-```bash
-openkit login
-```
-
-2. Build your tool:
-
-```bash
-openkit build
-```
-
-3. Publish to OpenKit:
-
-```bash
-openkit publish
-```
-
-After publishing, you'll receive a URL where you can view your tool on OpenKit. Other developers and AI agents can discover and use your tool through the OpenKit platform.
-
-## License
-
-MIT
+Visit [openkit.fun](https://openkit.fun) to learn more about OpenKit and discover other apps built by the community.

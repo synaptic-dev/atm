@@ -1,7 +1,7 @@
 {
   "name": "@opkt/openkit",
   "version": "0.0.1",
-  "description": "OpenKit - The World SDK for AI Agents",
+  "description": "OpenKit - Build structured AI apps with routes",
   "homepage": "https://openkit.fun",
   "repository": "https://github.com/synaptic-dev/openkit",
   "scripts": {
@@ -28,15 +28,20 @@
     "vitest": "^1.6.1"
   },
   "keywords": [
-    "cli",
     "ai",
+    "app",
+    "route",
+    "openai",
+    "agent",
     "tools",
-    "agent"
+    "llm"
   ],
   "author": "Synaptic",
   "license": "MIT",
   "dependencies": {
     "openai": "^4.86.1",
+    "pino": "^9.6.0",
+    "pino-pretty": "^13.0.0",
     "zod": "^3.24.1",
     "zod-to-json-schema": "3.24.2"
   }

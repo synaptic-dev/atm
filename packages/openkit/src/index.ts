@@ -3,13 +3,19 @@ export { default as openkit } from "./openkit";
 export type {
   MiddlewareFunction,
   HandlerFunction,
-  ToolBuilderOptions,
-  CapabilityBuilderOptions,
+  AppBuilderOptions,
+  RouteBuilderOptions,
   Context,
-  ToolRunResult,
+  AppRunResult,
   OpenAIAdapterOptions,
   OpenAIFunctionDefinition,
+  AppBuilderObject,
+  RouteBuilderObject,
 } from "./builders/types";
+
+// Export classes
+export { AppBuilder } from "./builders/app-builder";
+export { RouteBuilder } from "./builders/route-builder";
 
 // Export OpenAI types from types file
 export type {

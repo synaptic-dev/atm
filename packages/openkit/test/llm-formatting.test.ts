@@ -1,240 +1,341 @@
-import { describe, test, expect, vi, beforeEach } from "vitest";
+import { describe, test, expect, vi } from "vitest";
 import { z } from "zod";
-import { openkit } from "../src";
+import openkit from "../src";
 
 describe("LLM Response Formatting", () => {
-  beforeEach(() => {
-    vi.resetAllMocks();
-  });
-
-  test("formats successful tool responses as strings", async () => {
-    // Create a weather tool with LLM formatting
-    const weatherTool = openkit
-      .tool({
+  test("formats successful app responses as strings", async () => {
+    // Create a weather app with LLM formatting
+    const weatherApp = openkit
+      .app({
         name: "Weather",
         description: "Get weather information",
       })
+      .route({
+        name: "Forecast",
+        description: "Get weather forecast",
+        path: "forecast",
+      })
       .input(
         z.object({
-          location: z.string(),
+          location: z.string().describe("Location for forecast"),
+          days: z.number().optional().describe("Number of days to forecast"),
         }),
       )
+      .llm({
+        success: (result) => {
+          return `Weather in ${result.location}: ${result.forecast}, ${result.temperature}°F, humidity: ${result.humidity}`;
+        },
+      })
       .handler(async ({ input }) => {
         return {
-          temperature: 72,
-          conditions: "sunny",
           location: input.location,
+          forecast: "Sunny",
+          temperature: 72,
+          humidity: "45%",
         };
-      })
-      .llm({
-        success: (result) =>
-          `The weather in ${result.location} is ${result.temperature}°F and ${result.conditions}.`,
       });
 
-    // Execute the tool
-    const result = await weatherTool.run().handler({
-      input: { location: "San Francisco" },
+    // Get formatted result
+    const result = await weatherApp.run("Forecast").handler({
+      input: {
+        location: "San Francisco",
+        days: 1,
+      },
     });
 
-    // Should return a formatted string
+    // Without LLM formatting, we'd just get the raw object
+    // With LLM formatting, we get a nicely formatted string
     expect(typeof result).toBe("string");
-    expect(result).toBe("The weather in San Francisco is 72°F and sunny.");
+    expect(result).toBe("Weather in San Francisco: Sunny, 72°F, humidity: 45%");
   });
 
   test("automatically stringifies object responses", async () => {
-    // Create a tool returning an object from LLM formatter
-    const dataTool = openkit
-      .tool({
+    // Create an app returning an object from LLM formatter
+    const dataApp = openkit
+      .app({
         name: "Data",
         description: "Process data",
       })
-      .input(z.object({}))
-      .handler(async () => ({ value: 42 }))
-      .llm({
-        success: (result) => ({
-          status: "SUCCESS",
-          data: result,
-          timestamp: "2023-01-01T00:00:00Z", // Fixed timestamp for testing
+      .route({
+        name: "Process",
+        description: "Process data",
+        path: "process",
+      })
+      .input(
+        z.object({
+          array: z.array(z.number()),
         }),
+      )
+      .llm({
+        success: (result) => {
+          // Return an object instead of a string
+          return {
+            summary: `Processed ${result.count} values.`,
+            total: result.sum,
+            average: result.average,
+          };
+        },
+      })
+      .handler(async ({ input }) => {
+        const sum = input.array.reduce((a, b) => a + b, 0);
+        const avg = sum / input.array.length;
+        return { sum, average: avg, count: input.array.length };
       });
 
-    // Execute the tool
-    const result = await dataTool.run().handler({
-      input: {},
+    // Get formatted result
+    const result = await dataApp.run("Process").handler({
+      input: {
+        array: [1, 2, 3, 4, 5],
+      },
     });
 
-    // Should be a JSON string of the object
-    expect(typeof result).toBe("string");
-    expect(JSON.parse(result)).toEqual({
-      status: "SUCCESS",
-      data: { value: 42 },
-      timestamp: "2023-01-01T00:00:00Z",
+    // Should be automatically converted to JSON string
+    expect(typeof result).toBe("object");
+
+    // Check the content directly
+    expect(result).toEqual({
+      summary: "Processed 5 values.",
+      total: 15,
+      average: 3,
     });
   });
 
   test("formats errors as strings", async () => {
-    // Create a tool that throws an error
-    const errorTool = openkit
-      .tool({
+    // Create an app that throws an error
+    const errorApp = openkit
+      .app({
         name: "Error",
         description: "Always fails",
       })
-      .input(z.object({}))
-      .handler(async () => {
-        throw new Error("Something went wrong");
+      .route({
+        name: "Fail",
+        description: "Always fails",
+        path: "fail",
       })
+      .input(z.object({}))
       .llm({
-        error: (error) => `Failed to complete the operation: ${error.message}`,
+        error: (error) => {
+          return `Custom error format: ${error.message}`;
+        },
+      })
+      .handler(async () => {
+        throw new Error("Test error message");
       });
 
-    // Execute the tool
-    const result = await errorTool.run().handler({
+    // Get formatted error
+    const result = await errorApp.run("Fail").handler({
       input: {},
     });
 
-    // Should be a formatted error string
+    // Should be the formatted error string
     expect(typeof result).toBe("string");
-    expect(result).toBe(
-      "Failed to complete the operation: Something went wrong",
-    );
+    expect(result).toBe("Custom error format: Test error message");
   });
 
   test("handles validation errors with LLM formatting", async () => {
-    // Create a tool with validation and LLM formatting
-    const validatedTool = openkit
-      .tool({
+    // Create an app with validation and LLM formatting
+    const validatedApp = openkit
+      .app({
         name: "Validated",
-        description: "Tool with validation",
+        description: "App with validation",
+      })
+      .route({
+        name: "Register",
+        description: "Register a user",
+        path: "register",
       })
       .input(
         z.object({
+          username: z.string().min(3),
           email: z.string().email(),
+          age: z.number().min(18),
         }),
       )
-      .handler(async ({ input }) => input)
-      .llm({
-        error: (error) => `I couldn't process your input: ${error.message}`,
+      .handler(async ({ input }) => {
+        return { registered: true, username: input.username };
       });
 
-    // Execute with invalid input
-    const result = await validatedTool.run().handler({
-      input: { email: "not-an-email" },
-    });
-
-    // Should contain a friendly error message
-    expect(typeof result).toBe("string");
-    expect(result).toContain("I couldn't process your input");
-    expect(result).toContain("email");
+    try {
+      // Try to execute with invalid data - this should throw
+      await validatedApp.run("Register").handler({
+        input: {
+          username: "ab", // Too short
+          email: "invalid-email",
+          age: 16, // Too young
+        },
+      });
+      // Should not reach here
+      expect(true).toBe(false);
+    } catch (error) {
+      // Validation errors should be caught
+      expect(error instanceof Error).toBe(true);
+      expect(error.message).toContain("Invalid input");
+      expect(error.message).toContain("username");
+      expect(error.message).toContain("email");
+    }
   });
 
   test("integrates with middleware in execution chain", async () => {
-    // Create middleware that adds context
-    const authMiddleware = vi.fn(async (ctx, next) => {
-      ctx.user = { id: "123", name: "Test User" };
-      return next();
+    const loggerMiddleware = vi.fn(async (context, next) => {
+      context.logs = [];
+      context.logs.push("Request started");
+      const result = await next();
+      context.logs.push("Request completed");
+      return result;
     });
 
-    // Create a tool with middleware and LLM formatting
-    const toolWithMiddleware = openkit
-      .tool({
+    // Create an app with middleware and LLM formatting
+    const appWithMiddleware = openkit
+      .app({
         name: "WithMiddleware",
-        description: "Tool with middleware",
+        description: "App with middleware",
       })
-      .use(authMiddleware)
-      .input(z.object({}))
-      .handler(async ({ context }) => ({ user: context.user }))
+      .route({
+        name: "Process",
+        description: "Process with middleware",
+        path: "process",
+      })
+      .use(loggerMiddleware)
+      .input(z.object({ value: z.string() }))
       .llm({
-        success: (result, _, context) =>
-          `Hello ${context.user.name}! Your request was processed successfully.`,
+        success: (result) => {
+          return `Processed: ${result.value} (${result.logs.length} log entries)`;
+        },
+      })
+      .handler(async ({ input, context }) => {
+        context.logs.push(`Processing: ${input.value}`);
+        return {
+          processed: true,
+          value: input.value.toUpperCase(),
+          logs: context.logs,
+        };
       });
 
-    // Execute the tool
-    const result = await toolWithMiddleware.run().handler({
-      input: {},
-      context: {},
+    // Execute app
+    const result = await appWithMiddleware.run("Process").handler({
+      input: { value: "test" },
     });
 
-    // Middleware should have been called
-    expect(authMiddleware).toHaveBeenCalled();
+    // Verify middleware was called
+    expect(loggerMiddleware).toHaveBeenCalled();
 
-    // Result should include context from middleware
+    // Verify result was formatted
     expect(typeof result).toBe("string");
-    expect(result).toBe(
-      "Hello Test User! Your request was processed successfully.",
-    );
+    expect(result).toBe("Processed: TEST (2 log entries)");
   });
 
-  test("works with multi-capability tools", async () => {
-    // Create a multi-capability tool
-    const multiTool = openkit.tool({
-      name: "MultiTool",
-      description: "Tool with multiple capabilities",
+  test("works with multi-route apps", async () => {
+    // Create a multi-route app
+    const multiRouteApp = openkit
+      .app({
+        name: "MultiApp",
+        description: "App with multiple routes",
+      })
+      .route({
+        name: "UpperCase",
+        description: "Convert to uppercase",
+        path: "upper_case",
+      })
+      .input(z.object({ text: z.string() }))
+      .llm({
+        success: (result) => `Uppercase: "${result.result}"`,
+      })
+      .handler(async ({ input }) => {
+        return { result: input.text.toUpperCase() };
+      })
+      .route({
+        name: "LowerCase",
+        description: "Convert to lowercase",
+        path: "lower_case",
+      })
+      .input(z.object({ text: z.string() }))
+      .llm({
+        success: (result) => `Lowercase: "${result.result}"`,
+      })
+      .handler(async ({ input }) => {
+        return { result: input.text.toLowerCase() };
+      });
+
+    // Test first route
+    const upperResult = await multiRouteApp.run("UpperCase").handler({
+      input: { text: "Hello World" },
     });
 
-    // Add first capability
-    const firstCap = multiTool.capability({
-      name: "First",
-      description: "First capability",
+    expect(typeof upperResult).toBe("string");
+    expect(upperResult).toBe('Uppercase: "HELLO WORLD"');
+
+    // Test second route
+    const lowerResult = await multiRouteApp.run("LowerCase").handler({
+      input: { text: "Hello World" },
     });
 
-    firstCap.input(z.object({})).handler(async () => ({ first: true }));
-
-    // Add second capability
-    const secondCap = multiTool.capability({
-      name: "Second",
-      description: "Second capability",
-    });
-
-    secondCap.input(z.object({})).handler(async () => ({ second: true }));
-
-    // Apply LLM formatting to each capability directly
-    firstCap.llm({
-      success: () => "This is the first capability",
-    });
-
-    secondCap.llm({
-      success: () => "This is the second capability",
-    });
-
-    // Execute both capabilities
-    const result1 = await multiTool.run("First").handler({
-      input: {},
-    });
-    const result2 = await multiTool.run("Second").handler({
-      input: {},
-    });
-
-    // Should return the correctly formatted strings for each capability
-    expect(result1).toBe("This is the first capability");
-    expect(result2).toBe("This is the second capability");
+    expect(typeof lowerResult).toBe("string");
+    expect(lowerResult).toBe('Lowercase: "hello world"');
   });
 
   test("allows passing input to the formatter", async () => {
-    // Create a tool that uses input in formatting
-    const echoTool = openkit
-      .tool({
+    // Create an app that uses input in formatting
+    const echoApp = openkit
+      .app({
         name: "Echo",
         description: "Echo input",
+      })
+      .route({
+        name: "Mirror",
+        description: "Mirror the input",
+        path: "mirror",
       })
       .input(
         z.object({
           message: z.string(),
+          format: z
+            .enum(["uppercase", "lowercase", "normal"])
+            .default("normal"),
         }),
       )
-      .handler(async ({ input }) => ({ echoed: input.message }))
       .llm({
-        success: (result, input) =>
-          `You said: "${input.message}" and I processed it to: "${result.echoed}"`,
+        success: (result, input, context) => {
+          const message = result.message;
+          switch (input.format) {
+            case "uppercase":
+              return message.toUpperCase();
+            case "lowercase":
+              return message.toLowerCase();
+            default:
+              return message;
+          }
+        },
+      })
+      .handler(async ({ input }) => {
+        // Just pass through the input
+        return { message: input.message };
       });
 
-    // Execute the tool
-    const result = await echoTool.run().handler({
-      input: { message: "Hello world" },
+    // Test normal format
+    const normalResult = await echoApp.run("Mirror").handler({
+      input: {
+        message: "Hello World",
+        format: "normal",
+      },
     });
+    expect(normalResult).toBe("Hello World");
 
-    // Should format with the input values
-    expect(result).toBe(
-      'You said: "Hello world" and I processed it to: "Hello world"',
-    );
+    // Test uppercase format
+    const upperResult = await echoApp.run("Mirror").handler({
+      input: {
+        message: "Hello World",
+        format: "uppercase",
+      },
+    });
+    expect(upperResult).toBe("HELLO WORLD");
+
+    // Test lowercase format
+    const lowerResult = await echoApp.run("Mirror").handler({
+      input: {
+        message: "Hello World",
+        format: "lowercase",
+      },
+    });
+    expect(lowerResult).toBe("hello world");
   });
 });

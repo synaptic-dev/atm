@@ -31,26 +31,27 @@ export interface HandlerFunction<I = any, O = any> {
 }
 
 /**
- * Options for creating a new Tool using the builder pattern
+ * Options for creating a new App using the builder pattern
  */
-export interface ToolBuilderOptions {
+export interface AppBuilderOptions {
   name: string;
   description?: string;
 }
 
 /**
- * Options for creating a new capability using the builder pattern
+ * Options for creating a new route using the builder pattern
  */
-export interface CapabilityBuilderOptions {
+export interface RouteBuilderOptions {
   name: string;
   description?: string;
+  path: string;
 }
 
 /**
  * Options for the OpenAI adapter
  */
 export interface OpenAIAdapterOptions {
-  tools: any[];
+  apps: any[];
 }
 
 /**
@@ -61,34 +62,38 @@ export interface Context {
 }
 
 /**
- * Result of a tool run
+ * Result of an app run
  */
-export interface ToolRunResult<T = any> {
+export interface AppRunResult<T = any> {
   handler: (params: { input?: any; context?: Context }) => Promise<T>;
 }
 
 /**
- * Builder object for a tool
+ * Builder object for an app
  */
-export interface ToolBuilderObject {
+export interface AppBuilderObject {
   name: string;
   description: string;
-  capabilities: CapabilityBuilderObject[];
+  routes: RouteBuilderObject[];
   getOpenAIFunctions(): OpenAIFunctionDefinition[];
+  debug(): AppBuilderObject;
 }
 
 /**
- * Builder object for a capability
+ * Builder object for a route
  */
-export interface CapabilityBuilderObject {
+export interface RouteBuilderObject {
   name: string;
   description: string;
+  path: string;
   inputSchema?: z.ZodType;
   outputSchema?: z.ZodType;
   middleware: MiddlewareFunction[];
   _handler?: HandlerFunction;
   _validateInput(input: any): any;
   _validateOutput(output: any): any;
+  debug(): RouteBuilderObject;
+  run(input?: any): AppRunResult;
 }
 
 /**
