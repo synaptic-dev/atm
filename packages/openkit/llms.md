@@ -1,6 +1,6 @@
-# OpenKit for LLMs: Creating AI Tools
+# OpenKit for LLMs: Creating Headless Apps For AI
 
-This guide helps LLMs (like Claude, GPT, etc.) quickly create and use tools with the OpenKit framework. OpenKit is designed for building function-calling tools that integrate seamlessly with AI systems.
+This guide helps LLMs (like Claude, GPT, etc.) quickly create and use apps with the OpenKit framework. OpenKit is designed for building headless Apps-For-AI that integrate seamlessly with AI systems.
 
 ## Quick Start
 
@@ -8,11 +8,16 @@ This guide helps LLMs (like Claude, GPT, etc.) quickly create and use tools with
 import { z } from "zod";
 import openkit from "@opkt/openkit";
 
-// Basic tool creation pattern
-const weatherTool = openkit
-  .tool({
+// Basic app creation pattern
+const weatherApp = openkit
+  .app({
     name: "Weather",
     description: "Get weather information",
+  })
+  .route({
+    name: "Forecast",
+    description: "Get weather forecast",
+    path: "forecast",
   })
   .input(
     z.object({
@@ -45,30 +50,32 @@ const weatherTool = openkit
 
 ## Core Concepts
 
-### 1. Tool Structure
+### 1. App Structure
 
-Every tool has these key components:
+Every app has these key components:
 
-- **name & description**: Human-readable identifiers
+- **name & description**: Human-readable identifiers for the app
+- **routes**: Functions within the app, each with its own path
 - **input schema**: Defines and validates parameters using Zod
 - **output schema**: Validates handler results using Zod
 - **handler**: Function that performs the actual work
 - **llm formatter**: Shapes output specifically for LLM consumption
 
-### 2. Creating Multi-Capability Tools
+### 2. Creating Multi-Route Apps
 
-When a tool needs multiple operations:
+When an app needs multiple operations:
 
 ```typescript
-const emailTool = openkit
-  .tool({
+const emailApp = openkit
+  .app({
     name: "Email",
-    description: "Email client",
+    description: "Email client app",
   })
-  // First capability
-  .capability({
+  // First route
+  .route({
     name: "Send",
     description: "Send an email",
+    path: "send",
   })
   .input(
     z.object({
@@ -90,10 +97,11 @@ const emailTool = openkit
     success: () => "Email sent successfully. Message ID: msg-123",
     error: (err) => `Email sending failed: ${err.message}`,
   })
-  // Second capability
-  .capability({
+  // Second route
+  .route({
     name: "Read",
     description: "Read emails",
+    path: "read",
   })
   .input(
     z.object({
@@ -169,29 +177,55 @@ If validation fails:
 - Input validation failures prevent the handler from executing
 - Output validation failures are caught and can be formatted using the `.llm()` error formatter
 
-## Best Practices for LLM-Created Tools
+### 5. Context Sharing
 
-1. **Descriptive names and descriptions**: Make tools self-documenting
+You can share context between routes in an app:
+
+```typescript
+const myApp = openkit
+  .app({
+    name: "MyApp",
+    description: "An example app with shared context",
+  })
+  .context({
+    apiBaseUrl: "https://api.example.com",
+    apiKey: process.env.API_KEY,
+  })
+  .route({
+    name: "FirstRoute",
+    description: "First route using shared context",
+    path: "first",
+  })
+  .handler(async ({ context }) => {
+    // Access shared context
+    return { url: context.apiBaseUrl };
+  });
+```
+
+## Best Practices for LLM-Created Apps
+
+1. **Descriptive names and descriptions**: Make apps and routes self-documenting
 2. **Thorough input validation**: Use Zod's descriptive methods
 3. **Complete output validation**: Enforce consistent return structures
 4. **Meaningful error messages**: Help users understand what went wrong
 5. **Format outputs thoughtfully**: Use clear, direct language in your `.llm()` formatters
-6. **Single responsibility**: Each tool/capability should do one thing well
+6. **Single responsibility**: Each route should do one thing well
 
-## Complete Example: Search Tool
+## Complete Example: Search App
 
 ```typescript
 import { z } from "zod";
 import openkit from "@opkt/openkit";
 
-const searchTool = openkit
-  .tool({
+const searchApp = openkit
+  .app({
     name: "Search",
     description: "Search for information",
   })
-  .capability({
+  .route({
     name: "Web",
     description: "Search the web",
+    path: "web",
   })
   .input(
     z.object({
@@ -257,9 +291,10 @@ const searchTool = openkit
     },
     error: (error) => `Search operation failed: ${error.message}`,
   })
-  .capability({
+  .route({
     name: "Image",
     description: "Search for images",
+    path: "image",
   })
   .input(
     z.object({
@@ -305,9 +340,9 @@ const searchTool = openkit
     },
   });
 
-// Using the tool
+// Using the app
 async function example() {
-  const webResults = await searchTool.run("Web").handler({
+  const webResults = await searchApp.run("/web").handler({
     input: { query: "climate change", limit: 2 },
   });
 
@@ -318,12 +353,12 @@ async function example() {
 
 ## Integration with AI Systems
 
-When your tools are ready to use:
+When your apps are ready to use:
 
 1. **Direct execution**:
 
 ```typescript
-const result = await myTool.run().handler({
+const result = await myApp.run("/route-path").handler({
   input: { param: "value" },
 });
 ```
@@ -331,60 +366,77 @@ const result = await myTool.run().handler({
 2. **Use with OpenAI**:
 
 ```typescript
-// Create an OpenKit adapter for your tools
-const toolkit = openkit.openai({
-  tools: [weatherTool, emailTool],
+import { OpenAI } from "openai";
+import openkit from "@opkt/openkit";
+import myApp from "./my-app";
+
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+// Create an OpenAI adapter with your app
+const oai = openkit.openai({ apps: [myApp] });
+
+// Use the tools in your OpenAI call
+const response = await openai.chat.completions.create({
+  model: "gpt-4-turbo",
+  messages: [{ role: "user", content: "Can you help me use this app?" }],
+  tools: oai.tools(),
 });
 
-// Get OpenAI function definitions to pass to the API
-const functions = toolkit.tools();
+// Handle any tool calls
+if (response.choices[0].message.tool_calls) {
+  const toolResults = await oai.handler({ chatCompletion: response });
 
-// Example: Setting up OpenAI client
-import OpenAI from "openai";
+  // Send the results back to continue the conversation
+  const continuedResponse = await openai.chat.completions.create({
+    model: "gpt-4-turbo",
+    messages: [
+      { role: "user", content: "Can you help me use this app?" },
+      response.choices[0].message,
+      ...toolResults,
+    ],
+  });
 
-const openai = new OpenAI({
-  apiKey: process.env["OPENAI_API_KEY"],
-});
-
-// Using chat completions (OpenAI Node SDK v4+)
-const chatCompletion = await openai.chat.completions.create({
-  model: "gpt-4o",
-  messages: [
-    { role: "system", content: "You are a helpful assistant." },
-    { role: "user", content: "What's the weather like in Paris today?" },
-  ],
-  tools: functions,
-});
-
-const newMessages = await toolkit.handler({
-  chatCompletion: chatCompletion,
-});
-
-// Continue the conversation with tool results
-const finalResponse = await openai.chat.completions.create({
-  model: "gpt-4o",
-  messages: newMessages,
-});
-
-console.log(finalResponse.choices[0].message.content);
+  console.log(continuedResponse.choices[0].message.content);
+}
 ```
 
 The integration flow works as follows:
 
-1. Create tools using OpenKit's fluent API
-2. Pass tools to the `openkit.openai()` adapter
-3. Extract OpenAI function definitions using `toolkit.tools()`
+1. Create apps using OpenKit's fluent API
+2. Pass apps to the `openkit.openai()` adapter
+3. Extract OpenAI function definitions using `oai.tools()`
 4. Pass these definitions to the OpenAI API call
-5. When OpenAI returns tool calls, process them with `toolkit.handler()`
+5. When OpenAI returns tool calls, process them with `oai.handler()`
 6. Send the results back to OpenAI to complete the interaction
 
-This approach works with both the OpenAI Chat Completions API.
+## Debugging
+
+Enable debug mode to see detailed logs during development:
+
+```typescript
+const app = openkit
+  .app({
+    name: "MyApp",
+    description: "My test app",
+  })
+  .debug() // Enable debug mode for the app
+  .route({
+    name: "MyRoute",
+    description: "Test route",
+    path: "/test",
+  })
+  .handler(async () => {
+    return { status: "ok" };
+  })
+  .debug(); // Enable debug mode for this specific route
+```
 
 ## Remember
 
-- **Tools should be atomic**: Focus on one specific capability
+- **Apps should be focused**: Each app should have a clear purpose
+- **Routes should be atomic**: Each route should perform one specific function
 - **Validate inputs thoroughly**: Prevent errors before they happen
 - **Format outputs objectively**: Use neutral, factual language in the `.llm()` formatter
 - **Handle errors gracefully**: Provide clear error details without anthropomorphizing
 
-By following these patterns, you can create robust, user-friendly tools that extend capabilities for any AI system.
+By following these patterns, you can create robust, user-friendly apps that extend capabilities for any AI system.
