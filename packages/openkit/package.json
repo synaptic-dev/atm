@@ -5,7 +5,7 @@
   "homepage": "https://openkit.fun",
   "repository": "https://github.com/synaptic-dev/openkit",
   "scripts": {
-    "build": "tsup src/index.ts --format cjs,esm --dts",
+    "build": "tsup src/index.ts --format cjs,esm --dts --sourcemap",
     "prepublishOnly": "pnpm build",
     "test": "vitest run",
     "test:watch": "vitest",

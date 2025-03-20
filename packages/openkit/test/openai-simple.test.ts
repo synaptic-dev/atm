@@ -1,7 +1,7 @@
 import { describe, test, expect, vi } from "vitest";
 import { z } from "zod";
 import openkit from "../src";
-import { OpenAIAdapter } from "../src/builders/openai-adapter";
+import { OpenAIAdapter } from "../src/adapters/openai";
 import { createCalculatorApp, loggingMiddleware } from "./helpers";
 
 describe("OpenAI Tools Basic", () => {
@@ -67,7 +67,7 @@ describe("OpenAI Tools Basic", () => {
           {
             id: "call_123",
             function: {
-              name: "Weather",
+              name: "weather-get_forecast",
               arguments: JSON.stringify({
                 route_name: "GetForecast",
                 input: { location: "San Francisco" },
@@ -83,7 +83,7 @@ describe("OpenAI Tools Basic", () => {
     expect(results[0].tool_call_id).toBe("call_123");
 
     // Content should be properly formatted
-    const content = JSON.parse(results[0].content);
+    const content = JSON.parse(results[0].content as string);
     expect(content).toEqual({
       forecast: "Sunny",
       location: "San Francisco",
@@ -122,7 +122,7 @@ describe("OpenAI Tools Basic", () => {
           {
             id: "call_error",
             function: {
-              name: "Error",
+              name: "error-fail",
               arguments: JSON.stringify({
                 route_name: "Fail",
                 input: {},
@@ -150,7 +150,7 @@ describe("OpenAI Tools Basic", () => {
         {
           id: "call_1",
           function: {
-            name: "UnknownApp",
+            name: "unknownapp-someroute",
             arguments: JSON.stringify({
               route_name: "SomeRoute",
               input: {},
@@ -162,7 +162,7 @@ describe("OpenAI Tools Basic", () => {
 
     // Mock the handler response
     const mockResponse = {
-      role: "tool",
+      role: "tool" as const,
       tool_call_id: "call_1",
       content: "Error: App UnknownApp not found",
     };
@@ -216,7 +216,7 @@ describe("OpenAI Tools Basic", () => {
               {
                 id: "call_123",
                 function: {
-                  name: "Echo",
+                  name: "echo-echo",
                   arguments: JSON.stringify({
                     route_name: "Echo",
                     input: { message: "Hello world" },
@@ -237,7 +237,7 @@ describe("OpenAI Tools Basic", () => {
     expect(responses[0].tool_call_id).toBe("call_123");
 
     // Parse response to verify content
-    const content = JSON.parse(responses[0].content);
+    const content = JSON.parse(responses[0].content as string);
     expect(content).toEqual({ echo: "Hello world" });
   });
 

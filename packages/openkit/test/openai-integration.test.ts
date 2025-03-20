@@ -1,7 +1,7 @@
 import { describe, test, expect, vi, beforeEach } from "vitest";
 import { z } from "zod";
 import openkit from "../src";
-import { OpenAIAdapter } from "../src/builders/openai-adapter";
+import { OpenAIAdapter } from "../src/adapters/openai";
 import { createCalculatorApp } from "./helpers";
 
 // Mock OpenAI API response structures
@@ -205,7 +205,7 @@ describe("OpenAI Integration", () => {
         {
           id: "call_1",
           function: {
-            name: "Weather",
+            name: "weather-get_forecast",
             arguments: JSON.stringify({
               route_name: "GetForecast",
               input: { location: "San Francisco" },
@@ -215,7 +215,7 @@ describe("OpenAI Integration", () => {
         {
           id: "call_2",
           function: {
-            name: "Calculator",
+            name: "calculator-calculate",
             arguments: JSON.stringify({
               route_name: "Calculate",
               input: { a: 5, b: 3 },
@@ -297,7 +297,7 @@ describe("OpenAI Integration", () => {
               {
                 id: "call_123",
                 function: {
-                  name: "Echo",
+                  name: "echo-echo",
                   arguments: JSON.stringify({
                     route_name: "Echo",
                     input: { message: "Hello world" },
@@ -356,7 +356,7 @@ describe("OpenAI Integration", () => {
         {
           id: "call_error",
           function: {
-            name: "Error",
+            name: "error-fail",
             arguments: JSON.stringify({
               route_name: "Fail",
               input: {},
@@ -453,9 +453,9 @@ describe("OpenAI Integration", () => {
           id: "call_1",
           type: "function",
           function: {
-            name: "Weather", // App name
+            name: "weather-get_forecast",
             arguments: JSON.stringify({
-              route_name: "GetForecast", // Route name
+              route_name: "GetForecast",
               input: {
                 location: "San Francisco",
                 days: 3,
@@ -520,7 +520,7 @@ describe("OpenAI Integration", () => {
           id: "call_1",
           type: "function",
           function: {
-            name: "User",
+            name: "user-register",
             arguments: JSON.stringify({
               route_name: "Register",
               input: {
@@ -591,7 +591,7 @@ describe("OpenAI Integration", () => {
           id: "call_1",
           type: "function",
           function: {
-            name: "Unknown", // Non-existent app
+            name: "unknown-SomeRoute",
             arguments: JSON.stringify({
               route_name: "SomeRoute",
               input: { message: "test" },

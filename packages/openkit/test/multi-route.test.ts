@@ -23,11 +23,12 @@ describe("Multi-Route App", () => {
 
   test("each route can have its own schemas", async () => {
     // Create an app with different schemas for each route
-    const converter = openkit
-      .app({
-        name: "Converter",
-        description: "Unit conversion app",
-      })
+    const app = openkit.app({
+      name: "Converter",
+      description: "Unit conversion app",
+    });
+
+    app
       .route({
         name: "CelsiusToFahrenheit",
         description: "Convert Celsius to Fahrenheit",
@@ -42,7 +43,9 @@ describe("Multi-Route App", () => {
         return {
           fahrenheit: input.celsius * 1.8 + 32,
         };
-      })
+      });
+
+    app
       .route({
         name: "KilometersToMiles",
         description: "Convert kilometers to miles",
@@ -60,20 +63,20 @@ describe("Multi-Route App", () => {
       });
 
     // Test the first route
-    const tempResult = await converter.run("CelsiusToFahrenheit").handler({
+    const tempResult = await app.run("CelsiusToFahrenheit").handler({
       input: { celsius: 25 },
     });
     expect(tempResult).toEqual({ fahrenheit: 77 });
 
     // Test the second route
-    const distanceResult = await converter.run("KilometersToMiles").handler({
+    const distanceResult = await app.run("KilometersToMiles").handler({
       input: { kilometers: 10 },
     });
     expect(distanceResult.miles).toBeCloseTo(6.21371);
 
     // Should throw validation error for negative kilometers
     await expect(
-      converter.run("KilometersToMiles").handler({
+      app.run("KilometersToMiles").handler({
         input: { kilometers: -5 },
       }),
     ).rejects.toThrow();
@@ -81,11 +84,12 @@ describe("Multi-Route App", () => {
 
   test("each route can have its own middleware", async () => {
     // Create app with different middleware per route
-    const emailApp = openkit
-      .app({
-        name: "Email",
-        description: "Email client",
-      })
+    const app = openkit.app({
+      name: "Email",
+      description: "Email client",
+    });
+
+    app
       .route({
         name: "Send",
         description: "Send an email",
@@ -112,7 +116,9 @@ describe("Multi-Route App", () => {
           from: context.sender,
           timestamp: context.timestamp,
         };
-      })
+      });
+
+    app
       .route({
         name: "Archive",
         description: "Archive an email",
@@ -137,7 +143,7 @@ describe("Multi-Route App", () => {
       });
 
     // Test the Send route middleware
-    const sendResult = await emailApp.run("Send").handler({
+    const sendResult = await app.run("Send").handler({
       input: {
         to: "recipient@example.com",
         subject: "Test",
@@ -153,7 +159,7 @@ describe("Multi-Route App", () => {
     });
 
     // Test the Archive route middleware
-    const archiveResult = await emailApp.run("Archive").handler({
+    const archiveResult = await app.run("Archive").handler({
       input: {
         id: "msg-123",
       },
@@ -168,11 +174,12 @@ describe("Multi-Route App", () => {
 
   test("can find route by case-insensitive name", async () => {
     // Create app with route name containing spaces
-    const multiWordApp = openkit
-      .app({
-        name: "Multi Word App",
-        description: "App with multi-word route names",
-      })
+    const app = openkit.app({
+      name: "Multi Word App",
+      description: "App with multi-word route names",
+    });
+
+    app
       .route({
         name: "First Route",
         description: "First route with a space in the name",
@@ -180,7 +187,9 @@ describe("Multi-Route App", () => {
       })
       .handler(async () => {
         return { route: "first" };
-      })
+      });
+
+    app
       .route({
         name: "Second Route",
         description: "Second route with a space in the name",
@@ -191,24 +200,25 @@ describe("Multi-Route App", () => {
       });
 
     // Test can find by exact name
-    const result1 = await multiWordApp.run("First Route").handler({});
+    const result1 = await app.run("First Route").handler({});
     expect(result1).toEqual({ route: "first" });
 
     // Test can find by lowercase name
-    const result2 = await multiWordApp.run("first route").handler({});
+    const result2 = await app.run("first route").handler({});
     expect(result2).toEqual({ route: "first" });
 
     // Test can find the second route
-    const result3 = await multiWordApp.run("second route").handler({});
+    const result3 = await app.run("second route").handler({});
     expect(result3).toEqual({ route: "second" });
   });
 
   test("throws error for non-existent route", async () => {
-    const simpleApp = openkit
-      .app({
-        name: "Simple",
-        description: "Simple app",
-      })
+    const app = openkit.app({
+      name: "Simple",
+      description: "Simple app",
+    });
+
+    app
       .route({
         name: "Test",
         description: "Test route",
@@ -220,7 +230,7 @@ describe("Multi-Route App", () => {
 
     // Should throw for non-existent route
     try {
-      await simpleApp.run("NonExistent").handler({});
+      await app.run("NonExistent").handler({});
       // If we reach here, test should fail
       expect(true).toBe(false); // This line should not be reached
     } catch (error) {

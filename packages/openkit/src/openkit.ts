@@ -1,12 +1,6 @@
 import { AppBuilder } from "./builders/app-builder";
-import { RouteBuilder } from "./builders/route-builder";
-import { OpenAIAdapter } from "./builders/openai-adapter";
-import {
-  AppBuilderOptions,
-  AppRunResult,
-  OpenAIAdapterOptions,
-  RouteBuilderOptions,
-} from "./builders/types";
+import { OpenAIAdapter } from "./adapters/openai";
+import { AppBuilderOptions, OpenAIAdapterOptions } from "./builders/types";
 
 /**
  * Main OpenKit class to create and manage apps
@@ -17,7 +11,7 @@ export class OpenKit {
    * @param options App configuration
    * @returns AppBuilder instance
    */
-  app<T = any>(options: AppBuilderOptions): AppBuilder {
+  app(options: AppBuilderOptions): AppBuilder {
     return new AppBuilder(options);
   }
 

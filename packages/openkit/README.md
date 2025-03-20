@@ -1,6 +1,6 @@
 # OpenKit SDK
 
-OpenKit SDK enables developers to build headless Apps-For-AI.
+The library for agent interface.
 
 ## Installation
 
@@ -291,3 +291,80 @@ const app = openkit
 ## For more information
 
 Visit [openkit.fun](https://openkit.fun) to learn more about OpenKit and discover other apps built by the community.
+
+# Type Inference
+
+OpenKit provides excellent TypeScript support with automatic type inference for your routes, inputs, and outputs. This helps catch errors at compile time and provides better editor auto-completion.
+
+## Automatic Type Inference
+
+When you define routes with Zod schemas, OpenKit automatically infers the correct types without requiring explicit type annotations:
+
+```typescript
+import { openkit } from "@opkt/openkit";
+import { z } from "zod";
+
+// Define input and output schemas
+const userInputSchema = z.object({
+  name: z.string(),
+  age: z.number().optional(),
+  email: z.string().email(),
+});
+
+const userOutputSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  createdAt: z.date(),
+});
+
+// Create your app
+const app = openkit.app({ name: "UserService" });
+
+// Create a route with auto-inferred types
+const createUserRoute = app
+  .route({
+    name: "Create User",
+    path: "/users",
+  })
+  .input(userInputSchema) // Types are inferred from here
+  .output(userOutputSchema) // Types are inferred from here
+  .handler(async ({ input, context }) => {
+    // input is fully typed: { name: string, age?: number, email: string }
+    console.log(`Creating user: ${input.name}`);
+
+    // Return a typed response
+    return {
+      id: "user-123",
+      name: input.name,
+      createdAt: new Date(),
+    };
+  });
+
+// Run the handler with correct input types
+const result = await app.run("Create User").handler({
+  input: {
+    name: "John Doe",
+    email: "john@example.com",
+  },
+});
+// result is typed as { id: string, name: string, createdAt: Date }
+```
+
+## Type Utilities
+
+OpenKit also provides utility types if you need to extract types from your routes:
+
+```typescript
+import { RouteInput, RouteOutput, AppContext } from "@opkt/openkit";
+
+// Get the input type from a route
+type UserInput = RouteInput<typeof createUserRoute>;
+
+// Get the output type from a route
+type UserOutput = RouteOutput<typeof createUserRoute>;
+
+// Get the context type from an app
+type AppCtx = AppContext<typeof app>;
+```
+
+This makes it easy to reuse types throughout your application.

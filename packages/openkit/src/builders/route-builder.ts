@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { zodToJsonSchema } from "zod-to-json-schema";
 import {
   RouteBuilderOptions,
   HandlerFunction,
@@ -7,6 +8,7 @@ import {
   AppRunResult,
   Context,
   LLMFormatterOptions,
+  NextFunction,
 } from "./types";
 import { AppBuilder } from "./app-builder";
 import pino from "pino";
@@ -32,28 +34,33 @@ const logBoundary =
 /**
  * Builder for creating routes with a fluent API
  */
-export class RouteBuilder implements RouteBuilderObject {
+export class RouteBuilder<
+  I = unknown,
+  O = unknown,
+  C extends Record<string, unknown> = Record<string, unknown>,
+> implements RouteBuilderObject<I, O, C>
+{
   public name: string;
   public description: string;
   public path: string;
-  public inputSchema?: z.ZodType;
-  public outputSchema?: z.ZodType;
-  public middleware: MiddlewareFunction[] = [];
-  public _handler?: HandlerFunction;
-  private _llmFormatter?: LLMFormatterOptions;
+  public inputSchema?: z.ZodType<I>;
+  public outputSchema?: z.ZodType<O>;
+  public middleware: MiddlewareFunction<C>[] = [];
+  public _handler?: HandlerFunction<I, O, C>;
+  private _llmFormatter?: LLMFormatterOptions<I, O, C>;
   private _debugEnabled: boolean = false;
 
   /**
    * Parent app builder
    */
-  public app: AppBuilder;
+  public app: AppBuilder<C>;
 
   /**
    * Create a new RouteBuilder
    * @param appBuilder Parent app builder
    * @param options Route configuration options
    */
-  constructor(appBuilder: AppBuilder, options: RouteBuilderOptions) {
+  constructor(appBuilder: AppBuilder<C>, options: RouteBuilderOptions) {
     this.app = appBuilder;
     this.name = options.name;
     this.description = options.description || "";
@@ -61,102 +68,108 @@ export class RouteBuilder implements RouteBuilderObject {
   }
 
   /**
-   * Define the input schema for this route
+   * Define input schema for this route
    * @param schema Zod schema for input validation
-   * @returns this RouteBuilder instance
+   * @returns this RouteBuilder instance with updated type parameter
    */
-  input<T extends z.ZodType>(schema: T): RouteBuilder {
-    this.inputSchema = schema;
-    return this;
+  input<NewI>(schema: z.ZodType<NewI>): RouteBuilder<NewI, O, C> {
+    this.inputSchema = schema as any;
+    return this as any as RouteBuilder<NewI, O, C>;
   }
 
   /**
-   * Define the output schema for this route
+   * Define output schema for this route
    * @param schema Zod schema for output validation
-   * @returns this RouteBuilder instance
+   * @returns this RouteBuilder instance with updated type parameter
    */
-  output<T extends z.ZodType>(schema: T): RouteBuilder {
-    this.outputSchema = schema;
-    return this;
+  output<NewO>(schema: z.ZodType<NewO>): RouteBuilder<I, NewO, C> {
+    this.outputSchema = schema as any;
+    return this as any as RouteBuilder<I, NewO, C>;
   }
 
   /**
    * Add middleware to this route
    * @param middleware Middleware function
-   * @returns this RouteBuilder instance
+   * @returns this RouteBuilder instance with updated context type
    */
-  use(middleware: MiddlewareFunction): RouteBuilder {
-    this.middleware.push(middleware);
-    return this;
+  use<ExtendedContext extends Record<string, unknown> = {}>(
+    middleware: (
+      context: C,
+      next: NextFunction,
+    ) => Promise<{ context: ExtendedContext } | void>,
+  ): RouteBuilder<I, O, C & ExtendedContext> {
+    // Store the middleware but maintain the broader C type for backwards compatibility
+    this.middleware.push(middleware as unknown as MiddlewareFunction<C>);
+
+    // Return a RouteBuilder with the combined context type
+    return this as unknown as RouteBuilder<I, O, C & ExtendedContext>;
   }
 
   /**
-   * Define the handler function for this route
+   * Define handler for this route
    * @param handler Handler function
-   * @returns Parent AppBuilder to continue chain
+   * @returns This RouteBuilder instance
    */
-  handler<I = any, O = any>(handler: HandlerFunction<I, O>): AppBuilder {
-    this._handler = handler as HandlerFunction;
+  handler<HandlerReturn = O>(
+    handler: ({
+      input,
+      context,
+    }: {
+      input: I;
+      context: C;
+    }) => Promise<HandlerReturn>,
+  ): RouteBuilder<
+    I,
+    // More reliable check: Is O still effectively unknown?
+    // If yes, use HandlerReturn, otherwise use O (explicitly set output type)
+    [O] extends [unknown] ? HandlerReturn : O,
+    C
+  > {
+    // Store the handler with the appropriate typing
+    this._handler = handler as unknown as HandlerFunction<I, O, C>;
 
-    // Store a reference to the parent app to ensure it's always accessible
-    const parentApp = this.app;
-
-    // Ensure the app property is maintained after handler is set
-    Object.defineProperty(this, "app", {
-      get: () => parentApp,
-      configurable: false,
-      enumerable: true,
-    });
-
-    return this.app;
-  }
-
-  /**
-   * Define the handler function for this route and return the handler function
-   * @param handler Handler function
-   * @returns Handler function for immediate execution
-   */
-  createHandler<I = any, O = any>(
-    handler: HandlerFunction<I, O>,
-  ): AppRunResult<O> {
-    this._handler = handler as HandlerFunction;
-
-    // Add default LLM formatter
+    // Add default LLM formatter if not explicitly set
     if (!this._llmFormatter) {
       this.llm({
-        success: (result) => result,
-        error: (error) => {
-          throw error;
-        },
+        success: (result: any) => result,
+        error: (error) => ({
+          error: error.message,
+          details: error.stack,
+        }),
       });
     }
 
-    // Return the runnable handler
-    return this.run({});
+    // Return with proper type constraint enforcement
+    return this as unknown as RouteBuilder<
+      I,
+      [O] extends [unknown] ? HandlerReturn : O,
+      C
+    >;
   }
 
   /**
    * Enable debugging for this route
    * @returns this RouteBuilder instance
    */
-  debug(): RouteBuilder {
+  debug(): RouteBuilder<I, O, C> {
     this._debugEnabled = true;
     return this;
   }
 
   /**
    * Create a runner for direct invocation of this route
+   * @param rootContext Optional context to use for this invocation
    * @returns Object with handler function for executing the route
    */
-  run<T = any>(rootContext: Context = {}): AppRunResult<T> {
+  run(rootContext: C = {} as C): AppRunResult<O, C> {
     // Create a handler function that will be returned
     const handler = async ({
-      input = {},
-      context = {},
+      input = {} as unknown,
+      context = {} as C,
     }: {
-      input?: any;
-      context?: Context;
-    }): Promise<T> => {
+      input?: unknown;
+      context?: C;
+    }): Promise<O> => {
       const startTime = Date.now();
 
       // Basic app and route info for logs
@@ -169,7 +182,8 @@ export class RouteBuilder implements RouteBuilderObject {
       };
 
       // Check if this is being called from a tool call
-      const isFromToolCall = rootContext._fromToolCall === true;
+      const fromContext = rootContext as Record<string, unknown>;
+      const isFromToolCall = fromContext._fromToolCall === true;
 
       // Debug logging if enabled, but skip boundaries if called from a tool call
       if (this._debugEnabled) {
@@ -208,11 +222,26 @@ export class RouteBuilder implements RouteBuilderObject {
 
       // Create the middleware chain
       let currentMiddlewareIndex = -1;
-      const combinedContext = { ...rootContext, ...context };
+      let combinedContext = {
+        ...rootContext,
+        ...context,
+      } as C;
 
       // Define the next function that will be passed to middleware
-      const next = async () => {
+      //@ts-expect-error: TODO: fix in the future
+      const next: NextFunction = async (options?: {
+        context?: any;
+      }): Promise<unknown> => {
         currentMiddlewareIndex++;
+
+        // If middleware provided a context update, merge it with the combined context
+        if (options?.context) {
+          // Create a new context object with the updates
+          combinedContext = {
+            ...combinedContext,
+            ...options.context,
+          } as C;
+        }
 
         // If we've gone through all middleware, execute the handler
         if (currentMiddlewareIndex >= this.middleware.length) {
@@ -342,20 +371,26 @@ export class RouteBuilder implements RouteBuilderObject {
       };
 
       // Start the middleware chain
-      return await next();
+      const result = await next();
+      return result as O;
     };
 
     return { handler };
   }
 
   /**
-   * Configure LLM formatting for this route
-   * @param options LLM formatter options
-   * @returns this RouteBuilder instance
+   * Define LLM response formatter for this route
+   *
+   * @template TResult Optional more specific result type for the formatter
+   * @param options LLM response formatter options
+   * @returns Parent AppBuilder instance
    */
-  llm(options: LLMFormatterOptions): RouteBuilder {
-    this._llmFormatter = options;
-    return this;
+  llm<TResult = O>(options: {
+    success?: (result: TResult, input?: I, context?: C) => unknown;
+    error?: (error: Error, input?: I, context?: C) => unknown;
+  }): AppBuilder<any> {
+    this._llmFormatter = options as unknown as LLMFormatterOptions<I, O, C>;
+    return this.app;
   }
 
   /**
@@ -364,9 +399,7 @@ export class RouteBuilder implements RouteBuilderObject {
    */
   _toOpenAIFunction(): any {
     const schema = this.inputSchema || z.object({});
-    // Use 'as any' to work around TypeScript limitation
-    // ZodType doesn't expose jsonSchema in its type definitions
-    const jsonSchema = (schema as any).jsonSchema || {};
+    const jsonSchema = zodToJsonSchema(schema);
 
     return {
       type: "function",
@@ -375,8 +408,8 @@ export class RouteBuilder implements RouteBuilderObject {
         description: this.description,
         parameters: {
           type: "object",
-          properties: jsonSchema.properties || {},
-          required: jsonSchema.required || [],
+          properties: (jsonSchema as any).properties || {},
+          required: (jsonSchema as any).required || [],
         },
       },
     };
@@ -386,8 +419,8 @@ export class RouteBuilder implements RouteBuilderObject {
    * Validate input against the input schema
    * Note: This is for internal use
    */
-  _validateInput(input: any): any {
-    if (!this.inputSchema) return input;
+  _validateInput(input: unknown): I {
+    if (!this.inputSchema) return input as I;
 
     try {
       return this.inputSchema.parse(input);
@@ -402,8 +435,8 @@ export class RouteBuilder implements RouteBuilderObject {
    * Validate output against the output schema
    * Note: This is for internal use
    */
-  _validateOutput(output: any): any {
-    if (!this.outputSchema) return output;
+  _validateOutput(output: unknown): O {
+    if (!this.outputSchema) return output as O;
 
     try {
       return this.outputSchema.parse(output);
@@ -412,5 +445,45 @@ export class RouteBuilder implements RouteBuilderObject {
         `Invalid output from route "${this.name}": ${(error as Error).message}`,
       );
     }
+  }
+
+  /**
+   * Define the handler function for this route and return the handler function
+   * @param handler Handler function
+   * @returns Handler function for immediate execution
+   */
+  createHandler<HandlerReturn = O>(
+    handler: ({
+      input,
+      context,
+    }: {
+      input: I;
+      context: C;
+    }) => Promise<HandlerReturn>,
+  ): AppRunResult<
+    // More reliable check: Is O still effectively unknown?
+    // If yes, use HandlerReturn, otherwise use O (explicitly set output type)
+    [O] extends [unknown] ? HandlerReturn : O,
+    C
+  > {
+    // Store the handler with the appropriate typing
+    this._handler = handler as unknown as HandlerFunction<I, O, C>;
+
+    // Add default LLM formatter
+    if (!this._llmFormatter) {
+      this.llm({
+        success: (result: any) => result,
+        error: (error) => ({
+          error: error.message,
+          details: error.stack,
+        }),
+      });
+    }
+
+    // Return the runnable handler with proper type constraint enforcement
+    return this.run({} as C) as unknown as AppRunResult<
+      [O] extends [unknown] ? HandlerReturn : O,
+      C
+    >;
   }
 }

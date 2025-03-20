@@ -31,7 +31,8 @@ export function createAppWithRoute(options = {}) {
     route.input(inputSchema);
   }
 
-  return route.handler(handler);
+  route.handler(handler);
+  return app;
 }
 
 /**
@@ -39,11 +40,12 @@ export function createAppWithRoute(options = {}) {
  * Used as a common example in tests
  */
 export function createCalculatorApp() {
-  return openkit
-    .app({
-      name: "Calculator",
-      description: "Math calculator app",
-    })
+  const app = openkit.app({
+    name: "Calculator",
+    description: "Math calculator app",
+  });
+
+  app
     .route({
       name: "Add",
       description: "Add two numbers",
@@ -57,7 +59,9 @@ export function createCalculatorApp() {
     )
     .handler(async ({ input }) => {
       return { result: input.a + input.b };
-    })
+    });
+
+  app
     .route({
       name: "Subtract",
       description: "Subtract two numbers",
@@ -72,6 +76,8 @@ export function createCalculatorApp() {
     .handler(async ({ input }) => {
       return { result: input.a - input.b };
     });
+
+  return app;
 }
 
 /**

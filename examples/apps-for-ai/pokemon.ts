@@ -29,6 +29,15 @@ const pokemonApp = openkit
     description: "Capture a random Pokemon",
     path: "/capture",
   })
+  .use(async (context, next) => {
+    // Add a delay to the route
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    return next({
+      context: {
+        delay: 10000,
+      },
+    });
+  })
   .input(
     z.object({
       // Optional parameter to specify a particular Pokemon ID
@@ -74,6 +83,42 @@ const pokemonApp = openkit
       ),
     }),
   )
+  .handler(async ({ input, context }) => {
+    try {
+      // Generate a random Pokemon ID if none is provided
+      const pokemonId = input.id || Math.floor(Math.random() * 1025) + 1;
+
+      // Call the PokeAPI using the URL from context
+      const response = await axios.get(
+        `${context.apiBaseUrl}/pokemon/${pokemonId}`,
+      );
+      const data = response.data;
+
+      // Using correct types that match the output schema
+      return {
+        id: "test", // Correct: number type as required by schema
+        name: data.name,
+        types: data.types,
+        stats: data.stats,
+        height: data.height,
+        weight: data.weight,
+        sprites: {
+          front_default: data.sprites.front_default,
+        },
+        abilities: data.abilities,
+      };
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        throw new Error(
+          `Failed to capture Pokemon: ${error.response?.status} ${error.response?.statusText}`,
+        );
+      } else {
+        throw new Error(
+          `Failed to capture Pokemon: ${(error as Error).message}`,
+        );
+      }
+    }
+  })
   .llm({
     success: (result) => {
       // Format the Pokemon data for LLM display
@@ -99,42 +144,6 @@ const pokemonApp = openkit
     },
     error: (error) => `Failed to capture Pokemon: ${error.message}`,
   })
-  .handler(async ({ input, context }) => {
-    try {
-      // Generate a random Pokemon ID if none is provided
-      const pokemonId = input.id || Math.floor(Math.random() * 1025) + 1;
-
-      // Call the PokeAPI using the URL from context
-      const response = await axios.get(
-        `${context.apiBaseUrl}/pokemon/${pokemonId}`,
-      );
-      const data = response.data;
-
-      // Return selected fields from the API response
-      return {
-        id: data.id,
-        name: data.name,
-        types: data.types,
-        stats: data.stats,
-        height: data.height,
-        weight: data.weight,
-        sprites: {
-          front_default: data.sprites.front_default,
-        },
-        abilities: data.abilities,
-      };
-    } catch (error) {
-      if (axios.isAxiosError(error)) {
-        throw new Error(
-          `Failed to capture Pokemon: ${error.response?.status} ${error.response?.statusText}`,
-        );
-      } else {
-        throw new Error(
-          `Failed to capture Pokemon: ${(error as Error).message}`,
-        );
-      }
-    }
-  })
   .route({
     name: "Location",
     description: "Get information about Pokemon locations",
@@ -155,37 +164,30 @@ const pokemonApp = openkit
   .output(
     z.object({
       id: z.number(),
-      name: z.string(),
-      region: z.object({
-        name: z.string(),
-        url: z.string(),
-      }),
-      areas: z.array(
-        z.object({
-          name: z.string(),
-          url: z.string(),
-        }),
-      ),
-      names: z.array(
-        z.object({
-          name: z.string(),
-          language: z.object({
-            name: z.string(),
-            url: z.string(),
-          }),
-        }),
-      ),
-      game_indices: z.array(
-        z.object({
-          game_index: z.number(),
-          generation: z.object({
-            name: z.string(),
-            url: z.string(),
-          }),
-        }),
-      ),
     }),
   )
+  .handler(async ({ input, context }) => {
+    try {
+      // Call the PokeAPI using the URL from context
+      const response = await axios.get(
+        `${context.apiBaseUrl}/location/${input.id}`,
+      );
+      const data = response.data;
+
+      // Return the location data
+      return {
+        id: "test",
+      };
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        throw new Error(
+          `Failed to get location: ${error.response?.status} ${error.response?.statusText}`,
+        );
+      } else {
+        throw new Error(`Failed to get location: ${(error as Error).message}`);
+      }
+    }
+  })
   .llm({
     success: (result) => {
       // Find English name if available
@@ -228,33 +230,6 @@ const pokemonApp = openkit
       return response;
     },
     error: (error) => `Failed to get location information: ${error.message}`,
-  })
-  .handler(async ({ input, context }) => {
-    try {
-      // Call the PokeAPI using the URL from context
-      const response = await axios.get(
-        `${context.apiBaseUrl}/location/${input.id}`,
-      );
-      const data = response.data;
-
-      // Return the location data
-      return {
-        id: data.id,
-        name: data.name,
-        region: data.region,
-        areas: data.areas,
-        names: data.names,
-        game_indices: data.game_indices,
-      };
-    } catch (error) {
-      if (axios.isAxiosError(error)) {
-        throw new Error(
-          `Failed to get location: ${error.response?.status} ${error.response?.statusText}`,
-        );
-      } else {
-        throw new Error(`Failed to get location: ${(error as Error).message}`);
-      }
-    }
   })
   .debug(); // Enable debug mode for the entire app
 

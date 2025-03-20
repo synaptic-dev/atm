@@ -10,10 +10,21 @@ describe("App with Routes", () => {
         name: "CurrentTime",
         description: "A simple app that returns the current time",
       })
+      .context({
+        apiBaseUrl: "https://pokeapi.co/api/v2",
+        secret: "top-secret-data",
+      })
       .route({
         name: "Get",
         description: "Get the current time",
         path: "get",
+      })
+      .use(async (context, next) => {
+        anylogic()
+        return next({
+            auth: await auth() // <-- inject auth payload
+          }
+        })
       })
       .input(
         z.object({
@@ -23,16 +34,28 @@ describe("App with Routes", () => {
             .describe("Optional timezone (defaults to UTC)"),
         }),
       )
-      .handler(async ({ input }) => {
+      .output(
+        z.object({
+          currentTime: z.string(),
+          timestamp: z.number(),
+        }),
+      )
+      .handler(async ({ input, context }) => {
         const now = new Date();
         return {
-          currentTime: now.toISOString(),
-          timestamp: now.getTime(),
+          currentTime: "123",
+          timestamp: 123,
+          secret: context.secret,
         };
+      })
+      .llm({
+        success: (result) => {
+          return `The current time is ${result.currentTime}`;
+        },
       });
 
     // Execute the app
-    const result = await currentTimeApp.run("Get").handler({
+    const result = await currentTimeApp.run("get").handler({
       input: { timezone: "UTC" },
     });
 
@@ -117,7 +140,7 @@ describe("App with Routes", () => {
       });
 
     // Execute the route
-    const result = await appWithContext.run("Multiply").handler({
+    const result = await appWithContext.run("multiply").handler({
       input: { value: 5 },
     });
 
@@ -142,7 +165,7 @@ describe("App with Routes", () => {
       });
 
     // Execute the route with different case
-    const result = await app.run("testroute").handler({});
+    const result = await app.run().handler({});
 
     // Verify result
     expect(result).toEqual({ success: true });

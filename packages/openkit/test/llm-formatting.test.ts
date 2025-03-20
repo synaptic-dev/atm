@@ -1,6 +1,11 @@
 import { describe, test, expect, vi } from "vitest";
 import { z } from "zod";
 import openkit from "../src";
+import {
+  Context,
+  MiddlewareFunction,
+  TypedContext,
+} from "../src/builders/types";
 
 describe("LLM Response Formatting", () => {
   test("formats successful app responses as strings", async () => {
@@ -15,24 +20,31 @@ describe("LLM Response Formatting", () => {
         description: "Get weather forecast",
         path: "forecast",
       })
-      .input(
+      .output(
         z.object({
           location: z.string().describe("Location for forecast"),
+          forecast: z.string().describe("Forecast for the location"),
+          temperature: z.number().describe("Temperature in Fahrenheit"),
+          humidity: z.string().describe("Humidity percentage"),
+        }),
+      )
+      .input(
+        z.object({
           days: z.number().optional().describe("Number of days to forecast"),
         }),
       )
-      .llm({
-        success: (result) => {
-          return `Weather in ${result.location}: ${result.forecast}, ${result.temperature}°F, humidity: ${result.humidity}`;
-        },
-      })
       .handler(async ({ input }) => {
         return {
-          location: input.location,
+          location: "San Francisco",
           forecast: "Sunny",
           temperature: 72,
           humidity: "45%",
         };
+      })
+      .llm({
+        success: (result) => {
+          return `Weather in ${result.location}: ${result.forecast}, ${result.temperature}°F, humidity: ${result.humidity}`;
+        },
       });
 
     // Get formatted result
@@ -50,6 +62,10 @@ describe("LLM Response Formatting", () => {
   });
 
   test("automatically stringifies object responses", async () => {
+    // Define result type
+    type SumResult = { sum: number; average: number; count: number };
+    type FormattedResult = { summary: string; total: number; average: number };
+
     // Create an app returning an object from LLM formatter
     const dataApp = openkit
       .app({
@@ -66,6 +82,18 @@ describe("LLM Response Formatting", () => {
           array: z.array(z.number()),
         }),
       )
+      .output(
+        z.object({
+          sum: z.number(),
+          count: z.number(),
+          average: z.number(),
+        }),
+      )
+      .handler(async ({ input }) => {
+        const sum = input.array.reduce((a, b) => a + b, 0);
+        const avg = sum / input.array.length;
+        return { sum, average: avg, count: input.array.length };
+      })
       .llm({
         success: (result) => {
           // Return an object instead of a string
@@ -75,11 +103,6 @@ describe("LLM Response Formatting", () => {
             average: result.average,
           };
         },
-      })
-      .handler(async ({ input }) => {
-        const sum = input.array.reduce((a, b) => a + b, 0);
-        const avg = sum / input.array.length;
-        return { sum, average: avg, count: input.array.length };
       });
 
     // Get formatted result
@@ -113,13 +136,13 @@ describe("LLM Response Formatting", () => {
         path: "fail",
       })
       .input(z.object({}))
+      .handler(async () => {
+        throw new Error("Test error message");
+      })
       .llm({
         error: (error) => {
           return `Custom error format: ${error.message}`;
         },
-      })
-      .handler(async () => {
-        throw new Error("Test error message");
       });
 
     // Get formatted error
@@ -176,13 +199,25 @@ describe("LLM Response Formatting", () => {
   });
 
   test("integrates with middleware in execution chain", async () => {
-    const loggerMiddleware = vi.fn(async (context, next) => {
-      context.logs = [];
-      context.logs.push("Request started");
+    // Define the correct context type
+    interface LogContext {
+      logs: string[];
+    }
+    type ProcessResult = { processed: boolean; value: string; logs: string[] };
+
+    // Define properly typed middleware
+    const loggerMiddleware: MiddlewareFunction<LogContext> = async (
+      context,
+      next,
+    ) => {
+      // Initialize logs array
+      const typedContext = context as TypedContext<LogContext>;
+      typedContext.logs = [];
+      typedContext.logs.push("Request started");
       const result = await next();
-      context.logs.push("Request completed");
+      typedContext.logs.push("Request completed");
       return result;
-    });
+    };
 
     // Create an app with middleware and LLM formatting
     const appWithMiddleware = openkit
@@ -197,18 +232,19 @@ describe("LLM Response Formatting", () => {
       })
       .use(loggerMiddleware)
       .input(z.object({ value: z.string() }))
-      .llm({
-        success: (result) => {
-          return `Processed: ${result.value} (${result.logs.length} log entries)`;
-        },
-      })
       .handler(async ({ input, context }) => {
-        context.logs.push(`Processing: ${input.value}`);
+        const typedContext = context as TypedContext<LogContext>;
+        typedContext.logs.push(`Processing: ${input.value}`);
         return {
           processed: true,
           value: input.value.toUpperCase(),
-          logs: context.logs,
+          logs: typedContext.logs,
         };
+      })
+      .llm<ProcessResult>({
+        success: (result) => {
+          return `Processed: ${result.value} (${result.logs.length} log entries)`;
+        },
       });
 
     // Execute app
@@ -221,121 +257,169 @@ describe("LLM Response Formatting", () => {
 
     // Verify result was formatted
     expect(typeof result).toBe("string");
-    expect(result).toBe("Processed: TEST (2 log entries)");
+    expect(result).toBe("Processed: TEST (3 log entries)");
   });
 
   test("works with multi-route apps", async () => {
+    // Define result types
+    interface TextResult {
+      result: string;
+    }
+
     // Create a multi-route app
-    const multiRouteApp = openkit
-      .app({
-        name: "MultiApp",
-        description: "App with multiple routes",
-      })
+    const app = openkit.app({
+      name: "MultiApp",
+      description: "App with multiple routes",
+    });
+
+    // Route 1
+    app
       .route({
         name: "UpperCase",
         description: "Convert to uppercase",
         path: "upper_case",
       })
       .input(z.object({ text: z.string() }))
-      .llm({
-        success: (result) => `Uppercase: "${result.result}"`,
-      })
       .handler(async ({ input }) => {
         return { result: input.text.toUpperCase() };
       })
+      .llm<TextResult>({
+        success: (result) => `Uppercase: "${result.result}"`,
+      });
+
+    // Route 2
+    app
       .route({
         name: "LowerCase",
         description: "Convert to lowercase",
         path: "lower_case",
       })
       .input(z.object({ text: z.string() }))
-      .llm({
-        success: (result) => `Lowercase: "${result.result}"`,
-      })
       .handler(async ({ input }) => {
         return { result: input.text.toLowerCase() };
+      })
+      .llm<TextResult>({
+        success: (result) => `Lowercase: "${result.result}"`,
       });
 
     // Test first route
-    const upperResult = await multiRouteApp.run("UpperCase").handler({
+    const upperResult = await app.run("UpperCase").handler({
       input: { text: "Hello World" },
     });
-
-    expect(typeof upperResult).toBe("string");
     expect(upperResult).toBe('Uppercase: "HELLO WORLD"');
 
     // Test second route
-    const lowerResult = await multiRouteApp.run("LowerCase").handler({
+    const lowerResult = await app.run("LowerCase").handler({
       input: { text: "Hello World" },
     });
-
-    expect(typeof lowerResult).toBe("string");
     expect(lowerResult).toBe('Lowercase: "hello world"');
   });
 
-  test("allows passing input to the formatter", async () => {
-    // Create an app that uses input in formatting
-    const echoApp = openkit
+  test("formats errors with objects", async () => {
+    // Define error response type
+    interface ErrorResponse {
+      status: string;
+      message: string;
+      code: number;
+    }
+
+    // Create an app that uses object formatting for errors
+    const errorApp = openkit
       .app({
-        name: "Echo",
-        description: "Echo input",
+        name: "ErrorObject",
+        description: "Formats errors as objects",
       })
       .route({
-        name: "Mirror",
-        description: "Mirror the input",
-        path: "mirror",
+        name: "Fail",
+        description: "Always fails with a formatted object",
+        path: "fail",
       })
-      .input(
-        z.object({
-          message: z.string(),
-          format: z
-            .enum(["uppercase", "lowercase", "normal"])
-            .default("normal"),
-        }),
-      )
+      .input(z.object({}))
+      .handler(async () => {
+        throw new Error("Something went wrong");
+      })
       .llm({
-        success: (result, input, context) => {
-          const message = result.message;
-          switch (input.format) {
-            case "uppercase":
-              return message.toUpperCase();
-            case "lowercase":
-              return message.toLowerCase();
-            default:
-              return message;
-          }
-        },
-      })
-      .handler(async ({ input }) => {
-        // Just pass through the input
-        return { message: input.message };
+        error: (error) =>
+          ({
+            status: "error",
+            message: error.message,
+            code: 500,
+          }) as ErrorResponse,
       });
 
-    // Test normal format
-    const normalResult = await echoApp.run("Mirror").handler({
-      input: {
-        message: "Hello World",
-        format: "normal",
-      },
+    // Get formatted error
+    const result = await errorApp.run("Fail").handler({
+      input: {},
     });
-    expect(normalResult).toBe("Hello World");
 
-    // Test uppercase format
-    const upperResult = await echoApp.run("Mirror").handler({
-      input: {
-        message: "Hello World",
-        format: "uppercase",
-      },
+    // Should be the formatted error object
+    expect(typeof result).toBe("object");
+    expect(result).toEqual({
+      status: "error",
+      message: "Something went wrong",
+      code: 500,
     });
-    expect(upperResult).toBe("HELLO WORLD");
+  });
 
-    // Test lowercase format
-    const lowerResult = await echoApp.run("Mirror").handler({
-      input: {
-        message: "Hello World",
-        format: "lowercase",
-      },
+  test("uses default formatter if none provided", async () => {
+    // Create an app without explicit LLM formatter
+    const simpleApp = openkit
+      .app({
+        name: "Simple",
+        description: "Simple app with default formatter",
+      })
+      .route({
+        name: "Echo",
+        description: "Echoes back input",
+        path: "echo",
+      })
+      .input(z.object({ value: z.string() }))
+      .handler(async ({ input }) => {
+        return { value: input.value };
+      });
+
+    // Get result using default formatter
+    const result = await simpleApp.run("Echo").handler({
+      input: { value: "test" },
     });
-    expect(lowerResult).toBe("hello world");
+
+    // Default formatter should return the original object
+    expect(result).toEqual({ value: "test" });
+  });
+
+  test("default formatter handles errors correctly", async () => {
+    // Define error response type
+    interface DefaultErrorResponse {
+      error: string;
+      details: string | undefined;
+    }
+
+    // Create an app that throws an error
+    const errorApp = openkit
+      .app({
+        name: "ErrorDefault",
+        description: "Tests default error formatter",
+      })
+      .route({
+        name: "Fail",
+        description: "Always fails with default error formatting",
+        path: "fail",
+      })
+      .input(z.object({}))
+      .handler(async () => {
+        throw new Error("Default error handling test");
+      });
+
+    // Get formatted error with default formatter
+    const result = await errorApp.run("Fail").handler({
+      input: {},
+    });
+
+    // Default formatter should return an error object
+    expect(typeof result).toBe("object");
+    expect(result).toHaveProperty("error");
+    const errorResult = result as DefaultErrorResponse;
+    expect(errorResult.error).toBe("Default error handling test");
+    expect(result).toHaveProperty("details");
   });
 });

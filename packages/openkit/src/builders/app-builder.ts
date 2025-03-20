@@ -3,13 +3,10 @@ import { zodToJsonSchema } from "zod-to-json-schema";
 import {
   AppBuilderOptions,
   RouteBuilderOptions,
-  HandlerFunction,
-  MiddlewareFunction,
   AppBuilderObject,
   RouteBuilderObject,
   AppRunResult,
   Context,
-  LLMFormatterOptions,
   OpenAIFunctionDefinition,
 } from "./types";
 import { RouteBuilder } from "./route-builder";
@@ -36,11 +33,14 @@ const logBoundary =
 /**
  * Builder for creating App instances with a fluent API
  */
-export class AppBuilder implements AppBuilderObject {
+export class AppBuilder<
+  C extends Record<string, unknown> = Record<string, unknown>,
+> implements AppBuilderObject<C>
+{
   public name: string;
   public description: string;
-  public routes: RouteBuilderObject[] = [];
-  private rootContext: Context = {};
+  public routes: RouteBuilderObject<unknown, unknown, C>[] = [];
+  private rootContext: C = {} as C;
   private _debugEnabled: boolean = false;
 
   /**
@@ -58,23 +58,26 @@ export class AppBuilder implements AppBuilderObject {
    * @param context Context object with dependencies to inject
    * @returns this AppBuilder instance
    */
-  context(context: Context): AppBuilder {
-    this.rootContext = { ...this.rootContext, ...context };
-    return this;
+  context<T extends Record<string, unknown>>(context: T): AppBuilder<T & C> {
+    this.rootContext = {
+      ...this.rootContext,
+      ...context,
+    } as unknown as C & T;
+    return this as unknown as AppBuilder<T & C>;
   }
 
   /**
    * Add a route to the app
    * @param options Route configuration
-   * @returns RouteBuilder for the new route
+   * @returns The created RouteBuilder instance
    */
-  route(options: RouteBuilderOptions): RouteBuilder {
+  route(options: RouteBuilderOptions): RouteBuilder<unknown, unknown, C> {
     // Ensure path is provided
     if (!options.path) {
       throw new Error("Path is required for routes");
     }
 
-    const routeBuilder = new RouteBuilder(this, options);
+    const routeBuilder = new RouteBuilder<unknown, unknown, C>(this, options);
     this.routes.push(routeBuilder);
     return routeBuilder;
   }
@@ -83,7 +86,7 @@ export class AppBuilder implements AppBuilderObject {
    * Enable debugging for this app and all its routes
    * @returns this AppBuilder instance
    */
-  debug(): AppBuilder {
+  debug(): AppBuilder<C> {
     this._debugEnabled = true;
 
     // Enable debug for all routes
@@ -101,7 +104,7 @@ export class AppBuilder implements AppBuilderObject {
    * @param routeName Name or path of the route to run
    * @returns Object with handler function for executing the route
    */
-  run<T = any>(routeName: string): AppRunResult<T> {
+  run<U = unknown>(routeName: string): AppRunResult<U, C> {
     const startTime = Date.now();
 
     // Debug logging if enabled
@@ -149,7 +152,7 @@ export class AppBuilder implements AppBuilderObject {
       route.debug();
     }
 
-    return route.run(this.rootContext);
+    return route.run(this.rootContext) as unknown as AppRunResult<U, C>;
   }
 
   /**
@@ -215,7 +218,13 @@ export class AppBuilder implements AppBuilderObject {
   async handleToolCall(functionName: string, args: any): Promise<any> {
     const startTime = Date.now();
 
-    if (this._debugEnabled) {
+    // Get app name prefix from function name to identify the correct app
+    const appNameFromFunction = functionName.split("-")[0];
+    const isForThisApp = functionName.startsWith(
+      `${this.name.toLowerCase().replace(/\s+/g, "_")}-`,
+    );
+
+    if (this._debugEnabled && isForThisApp) {
       // Show boundary only at the very beginning
       logger.debug(logBoundary);
       logger.info({
@@ -245,7 +254,7 @@ export class AppBuilder implements AppBuilderObject {
         const runner = route.run(routeContext);
         const result = await runner.handler({
           input: args,
-          context: {},
+          context: routeContext,
         });
 
         if (this._debugEnabled) {
@@ -268,7 +277,7 @@ export class AppBuilder implements AppBuilderObject {
       }
     }
 
-    if (this._debugEnabled) {
+    if (this._debugEnabled && isForThisApp) {
       // Log unhandled call and show boundary at the very end
       logger.warn({
         event: "tool_call_unhandled",

@@ -12,6 +12,6 @@
     },
     "noImplicitAny": false
   },
-  "include": ["./**/*.ts"],
+  "include": ["./**/*.ts", "apps-for-ai/gmail.ts"],
   "exclude": ["node_modules"]
 }

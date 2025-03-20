@@ -4,6 +4,8 @@ import dotenv from "dotenv";
 import openkit from "@opkt/openkit";
 import pokemonApp from "./apps-for-ai/pokemon";
 import readline from "readline";
+import gmail from "./apps-for-ai/gmail";
+import firecrawlApp from "./apps-for-ai/firecrawl";
 
 dotenv.config();
 
@@ -13,9 +15,14 @@ const openai = new OpenAI({
   baseURL: process.env.AI_BASE_URL,
 });
 
+// Enable debug mode for all apps
+pokemonApp.debug();
+gmail.debug();
+firecrawlApp.debug();
+
 // Create an OpenKit toolkit with the pokemon tool
 const toolkit = openkit.openai({
-  apps: [pokemonApp],
+  apps: [pokemonApp, gmail, firecrawlApp],
 });
 
 // Create a readline interface for CLI interaction
@@ -29,16 +36,16 @@ const conversationHistory: ChatCompletionMessageParam[] = [
   {
     role: "system",
     content:
-      "You are a helpful AI assistant that can help with Pokemon information using a tool when needed. Try to be concise in your responses.",
+      "You are a powerful AI assistant, the system has installed many apps for you to use. Try to be concise in your responses.",
   },
 ];
 
 async function main() {
-  console.log("\n🤖 Pokemon Assistant CLI 🤖");
+  console.log("\n🤖 OK Agent 🤖");
   console.log("--------------------------------");
   console.log("Type 'exit' or 'quit' to end the conversation.");
   console.log(
-    "Try asking about Pokemon, for example: 'Capture a random Pokemon for me'\n",
+    "Ask the agent to do anything you want, it will use the installed apps to help you.",
   );
 
   // Start the interaction loop
@@ -75,7 +82,7 @@ async function promptUser() {
 
       // Call OpenAI API with the conversation history
       const response = await openai.chat.completions.create({
-        model: "gpt-4o",
+        model: "gpt-3.5-turbo",
         messages: conversationHistory,
         tools: tools,
       });
@@ -85,14 +92,16 @@ async function promptUser() {
       process.stdout.write("\r\n");
 
       // Add assistant's response to history
-      if (response.choices[0].message) {
+      if (response?.choices?.[0].message) {
         conversationHistory.push(response.choices[0].message);
+      } else {
+        console.error("No response from OpenAI", response);
       }
 
       // Check if there are tool calls
       if (
-        response.choices[0]?.message?.tool_calls &&
-        response.choices[0].message.tool_calls.length > 0
+        response?.choices?.[0]?.message?.tool_calls &&
+        response?.choices?.[0]?.message?.tool_calls.length > 0
       ) {
         console.log("AI: I'm using a tool to help answer your question...\n");
 
@@ -108,20 +117,22 @@ async function promptUser() {
 
         // Get final response incorporating tool results
         const finalResponse = await openai.chat.completions.create({
-          model: "gpt-4o",
+          model: "gpt-3.5-turbo",
           messages: conversationHistory,
         });
 
         // Add final response to history
-        if (finalResponse.choices[0].message) {
+        if (finalResponse?.choices?.[0]?.message) {
           conversationHistory.push(finalResponse.choices[0].message);
+        } else {
+          console.error("No final response from OpenAI", finalResponse);
         }
 
         // Display the final response
-        console.log(`AI: ${finalResponse.choices[0].message.content}`);
+        console.log(`AI: ${finalResponse?.choices?.[0]?.message?.content}`);
       } else {
         // Display the direct response
-        console.log(`AI: ${response.choices[0].message.content}`);
+        console.log(`AI: ${response?.choices?.[0]?.message?.content}`);
       }
     } catch (error: any) {
       console.error("\nError:", error.message);

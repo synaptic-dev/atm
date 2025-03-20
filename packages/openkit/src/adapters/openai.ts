@@ -1,4 +1,4 @@
-import { OpenAIAdapterOptions } from "./types";
+import { OpenAIAdapterOptions } from "../builders/types";
 import {
   OpenAIChatCompletionTool,
   OpenAIChatCompletionToolMessageParam,
@@ -68,8 +68,16 @@ export class OpenAIAdapter {
         // Find the right app and execute
         let response: any = null;
 
+        // Extract app name prefix from function name
+        const appNamePrefix = name.split("-")[0];
+
+        // Find the app that should handle this tool call based on name prefix
         for (const app of this._apps) {
-          if (typeof app.handleToolCall === "function") {
+          // Check if this app's name matches the function name prefix
+          const appPrefix = app.name.toLowerCase().replace(/\s+/g, "_");
+          const isForThisApp = name.startsWith(`${appPrefix}-`);
+
+          if (isForThisApp && typeof app.handleToolCall === "function") {
             // Try to handle with this app
             const handled = await app.handleToolCall(name, args);
             if (handled !== undefined) {
@@ -79,14 +87,14 @@ export class OpenAIAdapter {
           }
         }
 
-        // Create response
+        // Create response - ensure content is always a string, never null
         results.push({
           role: "tool",
           tool_call_id: id,
-          content: JSON.stringify(response),
+          content: response !== null ? JSON.stringify(response) : "",
         });
       } catch (error) {
-        // Handle errors
+        // Handle errors - ensure error message is always a string, never null
         results.push({
           role: "tool",
           tool_call_id: id,
