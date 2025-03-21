@@ -1,7 +1,7 @@
 {
   "name": "@opkt/openkit",
   "version": "0.0.1",
-  "description": "OpenKit - Build structured AI apps with routes",
+  "description": "OpenKit - The library for agent interfaces",
   "homepage": "https://openkit.fun",
   "repository": "https://github.com/synaptic-dev/openkit",
   "scripts": {
@@ -29,8 +29,6 @@
   },
   "keywords": [
     "ai",
-    "app",
-    "route",
     "openai",
     "agent",
     "tools",

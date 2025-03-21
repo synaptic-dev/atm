@@ -15,8 +15,7 @@ const openai = new OpenAI({
   baseURL: process.env.AI_BASE_URL,
 });
 
-// Create an OpenKit toolkit with the pokemon tool
-const toolkit = openkit.openai({
+const bundle = openkit.openai({
   apps: [pokemonApp, gmail, firecrawlApp],
 });
 
@@ -73,7 +72,7 @@ async function promptUser() {
       }, 300);
 
       // Get OpenAI-compatible function definitions
-      const tools = toolkit.tools();
+      const tools = bundle.tools();
 
       // Call OpenAI API with the conversation history
       const response = await openai.chat.completions.create({
@@ -101,7 +100,7 @@ async function promptUser() {
         console.log("AI: I'm using a tool to help answer your question...\n");
 
         // Handle tool calls (execute the actual functions)
-        const toolResponses = await toolkit.handler({
+        const toolResponses = await bundle.handler({
           chatCompletion: response,
         });
 
