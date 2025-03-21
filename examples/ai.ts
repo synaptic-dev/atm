@@ -15,11 +15,6 @@ const openai = new OpenAI({
   baseURL: process.env.AI_BASE_URL,
 });
 
-// Enable debug mode for all apps
-pokemonApp.debug();
-gmail.debug();
-firecrawlApp.debug();
-
 // Create an OpenKit toolkit with the pokemon tool
 const toolkit = openkit.openai({
   apps: [pokemonApp, gmail, firecrawlApp],

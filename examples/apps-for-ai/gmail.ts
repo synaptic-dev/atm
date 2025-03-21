@@ -293,6 +293,10 @@ const gmailApp = openkit
       }
 
       let searchInfo = `Gmail Messages`;
+      if (!input) {
+        return searchInfo;
+      }
+
       if (input.q) {
         searchInfo += ` matching "${input.q}"`;
       }

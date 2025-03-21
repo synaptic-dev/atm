@@ -42,3 +42,7 @@ yarn-error.log*
 # Wrangler
 wrangler.jsonc
 wrangler.toml
+
+# Credentials
+credentials.json
+token.json

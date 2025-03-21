@@ -105,22 +105,6 @@ export class AppBuilder<
    * @returns Object with handler function for executing the route
    */
   run<U = unknown>(routeName: string): AppRunResult<U, C> {
-    const startTime = Date.now();
-
-    // Debug logging if enabled
-    if (this._debugEnabled) {
-      // Show boundary only at the very beginning
-      logger.debug(logBoundary);
-      logger.info({
-        event: "route_run_start",
-        msg: `App ${this.name} - Running route: ${routeName}`,
-        app_name: this.name,
-        app_description: this.description,
-        route: routeName,
-        context: this.rootContext,
-      });
-    }
-
     // Find the route by name or path
     const route = this.routes.find(
       (r) =>
@@ -132,18 +116,6 @@ export class AppBuilder<
 
     if (!route) {
       // Debug route not found
-      if (this._debugEnabled) {
-        // Log error and show boundary at the very end
-        logger.error({
-          event: "route_not_found",
-          msg: `App ${this.name} - Route not found: ${routeName}`,
-          app_name: this.name,
-          app_description: this.description,
-          route: routeName,
-          duration: Date.now() - startTime,
-        });
-        logger.debug(logBoundary);
-      }
       throw new Error(`Route "${routeName}" not found`);
     }
 
@@ -216,28 +188,6 @@ export class AppBuilder<
    * @returns Result of the function execution
    */
   async handleToolCall(functionName: string, args: any): Promise<any> {
-    const startTime = Date.now();
-
-    // Get app name prefix from function name to identify the correct app
-    const appNameFromFunction = functionName.split("-")[0];
-    const isForThisApp = functionName.startsWith(
-      `${this.name.toLowerCase().replace(/\s+/g, "_")}-`,
-    );
-
-    if (this._debugEnabled && isForThisApp) {
-      // Show boundary only at the very beginning
-      logger.debug(logBoundary);
-      logger.info({
-        event: "tool_call_start",
-        msg: `App ${this.name} - Tool call started: ${functionName}`,
-        app_name: this.name,
-        app_description: this.description,
-        function: functionName,
-        input: args,
-      });
-    }
-
-    // For multi-route apps, check if the function name matches app-route pattern
     const appPrefix = `${this.name.toLowerCase().replace(/\s+/g, "_")}-`;
     if (functionName.startsWith(appPrefix)) {
       // Extract the route path
@@ -250,45 +200,21 @@ export class AppBuilder<
 
       if (route) {
         // Execute the route with a context flag indicating this is from a tool call
-        const routeContext = { ...this.rootContext, _fromToolCall: true };
+        const routeContext = {
+          ...this.rootContext,
+          _fromToolCall: true,
+          _appDebugEnabled: this._debugEnabled,
+        };
         const runner = route.run(routeContext);
+
+        // The result is what comes back from the route, which is now formatted by the LLM formatter in the route
         const result = await runner.handler({
           input: args,
           context: routeContext,
         });
 
-        if (this._debugEnabled) {
-          // Log the result and show boundary only at the very end
-          logger.info({
-            event: "tool_call_complete",
-            msg: `App ${this.name} - Tool call completed: ${functionName} (${routePath})`,
-            app_name: this.name,
-            app_description: this.description,
-            function: functionName,
-            route: routePath,
-            input: args,
-            output: result,
-            duration: Date.now() - startTime,
-          });
-          logger.debug(logBoundary);
-        }
-
         return result;
       }
-    }
-
-    if (this._debugEnabled && isForThisApp) {
-      // Log unhandled call and show boundary at the very end
-      logger.warn({
-        event: "tool_call_unhandled",
-        msg: `App ${this.name} - Unhandled tool call: ${functionName}`,
-        app_name: this.name,
-        app_description: this.description,
-        function: functionName,
-        input: args,
-        duration: Date.now() - startTime,
-      });
-      logger.debug(logBoundary);
     }
 
     return undefined;

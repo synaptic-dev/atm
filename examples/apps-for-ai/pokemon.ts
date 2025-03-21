@@ -3,40 +3,25 @@ import openkit from "@opkt/openkit";
 import axios from "axios";
 
 /**
- * Pokemon App - Multi-route app for working with Pokemon data
+ * Pokemon AFA(Apps-for-AI) app
  *
  * Routes:
- * 1. Capture: Randomly captures a Pokemon by making an API call to PokeAPI
- * 2. Location: Get information about Pokemon locations from PokeAPI
+ * 1. Capture: Randomly captures a Pokemon
+ * 2. Location: Get information about Pokemon locations
  */
 
-// Define the Pokemon app
 const pokemonApp = openkit
   .app({
     name: "Pokemon",
     description: "App for working with Pokemon data from PokeAPI",
   })
-  // Using root context to store the API base URL so it can be:
-  // 1. Easily changed in one place
-  // 2. Accessed by all routes
-  // 3. Overridden at runtime if needed (e.g., for testing with a mock API)
   .context({
     apiBaseUrl: "https://pokeapi.co/api/v2",
   })
-  // Capture route
   .route({
     name: "Capture",
     description: "Capture a random Pokemon",
     path: "/capture",
-  })
-  .use(async (context, next) => {
-    // Add a delay to the route
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    return next({
-      context: {
-        delay: 10000,
-      },
-    });
   })
   .input(
     z.object({
@@ -46,7 +31,8 @@ const pokemonApp = openkit
         .int()
         .describe(
           "Pokemon ID to capture. If not provided, a random Pokemon will be captured.",
-        ),
+        )
+        .default(Math.floor(Math.random() * 1000) + 1),
     }),
   )
   .output(
@@ -96,7 +82,7 @@ const pokemonApp = openkit
 
       // Using correct types that match the output schema
       return {
-        id: "test", // Correct: number type as required by schema
+        id: pokemonId, // Correct: number type as required by schema
         name: data.name,
         types: data.types,
         stats: data.stats,
@@ -161,11 +147,6 @@ const pokemonApp = openkit
         ),
     }),
   )
-  .output(
-    z.object({
-      id: z.number(),
-    }),
-  )
   .handler(async ({ input, context }) => {
     try {
       // Call the PokeAPI using the URL from context
@@ -175,9 +156,7 @@ const pokemonApp = openkit
       const data = response.data;
 
       // Return the location data
-      return {
-        id: "test",
-      };
+      return data;
     } catch (error) {
       if (axios.isAxiosError(error)) {
         throw new Error(
@@ -191,46 +170,10 @@ const pokemonApp = openkit
   .llm({
     success: (result) => {
       // Find English name if available
-      const englishName =
-        result.names.find((n) => n.language.name === "en")?.name || result.name;
-
-      // Format location areas
-      const areasString = result.areas
-        .map((area) => {
-          // Convert kebab-case to title case
-          return area.name
-            .split("-")
-            .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-            .join(" ");
-        })
-        .join(", ");
-
-      // Format game generations
-      const gamesString = result.game_indices
-        .map((g) => {
-          return g.generation.name
-            .split("-")
-            .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-            .join(" ");
-        })
-        .join(", ");
-
-      // Build the response
-      let response = `Location: ${englishName} (ID: ${result.id})\n\n`;
-      response += `Region: ${result.region.name.charAt(0).toUpperCase() + result.region.name.slice(1)}\n`;
-
-      if (areasString) {
-        response += `Areas: ${areasString}\n`;
-      }
-
-      if (gamesString) {
-        response += `Featured in: ${gamesString}\n`;
-      }
-
-      return response;
+      return `Location: (ID: ${result.id})`;
     },
     error: (error) => `Failed to get location information: ${error.message}`,
   })
-  .debug(); // Enable debug mode for the entire app
+  .debug();
 
 export default pokemonApp;

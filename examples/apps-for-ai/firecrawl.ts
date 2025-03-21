@@ -6,6 +6,10 @@ import FirecrawlApp, { ScrapeResponse } from "@mendable/firecrawl-js";
 // Load environment variables
 dotenv.config();
 
+if (!process.env.FIRECRAWL_API_KEY) {
+  throw new Error("FIRECRAWL_API_KEY is not set");
+}
+
 // Create the FirecrawlApp client
 class FirecrawlClient {
   private app: any;
@@ -41,9 +45,9 @@ class FirecrawlClient {
   }
 }
 
-// Initialize client with API key from environment
-const apiKey = "fc-90a85eac2fc04f148670aab97e7294d9";
-const firecrawlClient = new FirecrawlClient({ apiKey });
+const firecrawlClient = new FirecrawlClient({
+  apiKey: process.env.FIRECRAWL_API_KEY,
+});
 
 // Create the Firecrawl app
 const firecrawlApp = openkit

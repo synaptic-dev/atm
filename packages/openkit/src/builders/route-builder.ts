@@ -29,7 +29,7 @@ const logger = pino({
 
 // Log boundary to make debug logs more visible
 const logBoundary =
-  "========================== OpenKit Debug =============================";
+  "\n\n========================== OpenKit Debug =============================\n\n";
 
 /**
  * Builder for creating routes with a fluent API
@@ -162,6 +162,43 @@ export class RouteBuilder<
    * @returns Object with handler function for executing the route
    */
   run(rootContext: C = {} as C): AppRunResult<O, C> {
+    logger.debug(logBoundary);
+    const startTime = Date.now();
+
+    // Basic app and route info for logs
+    const baseLogInfo = {
+      app: {
+        name: this.app.name,
+        description: this.app.description,
+        routes: this.app.routes.reduce(
+          (acc, route) => {
+            acc[route.path] = {
+              name: route.name,
+              path: route.path,
+              description: route.description,
+            };
+            return acc;
+          },
+          {} as Record<
+            string,
+            { name: string; path: string; description: string }
+          >,
+        ),
+      },
+      route: {
+        name: this.name,
+        path: this.path,
+        description: this.description,
+      },
+    };
+
+    const appChildLogger = logger.child({
+      ...baseLogInfo,
+      event: "app_start",
+    });
+
+    appChildLogger.debug("App started");
+
     // Create a handler function that will be returned
     const handler = async ({
       input = {} as unknown,
@@ -170,48 +207,22 @@ export class RouteBuilder<
       input?: unknown;
       context?: C;
     }): Promise<O> => {
-      const startTime = Date.now();
-
-      // Basic app and route info for logs
-      const baseLogInfo = {
-        app_name: this.app.name,
-        app_description: this.app.description,
-        route_name: this.name,
-        route_path: this.path,
-        route_description: this.description,
-      };
-
       // Check if this is being called from a tool call
       const fromContext = rootContext as Record<string, unknown>;
       const isFromToolCall = fromContext._fromToolCall === true;
 
-      // Debug logging if enabled, but skip boundaries if called from a tool call
-      if (this._debugEnabled) {
-        // Only show boundary if not called from a tool call
-        if (!isFromToolCall) {
-          logger.debug(logBoundary);
-        }
-
-        logger.info({
-          ...baseLogInfo,
-          event: "route_start",
-          msg: `Route started: ${this.name}`,
-          input,
-          context,
-        });
-      }
-
       // Make sure a handler is defined
       if (!this._handler) {
         if (this._debugEnabled) {
-          // Log error and show boundary at the very end
-          logger.error({
+          // Log error
+          const child = logger.child({
             ...baseLogInfo,
-            event: "route_error",
-            msg: `No handler defined for route: ${this.name}`,
+            event: "route_internal_error",
             error: "No handler defined",
             duration: Date.now() - startTime,
           });
+          child.debug(`No handler defined for route`);
+
           // Only show boundary if not called from a tool call
           if (!isFromToolCall) {
             logger.debug(logBoundary);
@@ -248,11 +259,33 @@ export class RouteBuilder<
           const validatedInput = this._validateInput(input);
 
           try {
+            if (this._debugEnabled) {
+              // If this is from a tool call, log that we're starting route execution
+              // but never show boundary (app-builder handles that)
+              const child = logger.child({
+                ...baseLogInfo,
+                event: "resolve_start",
+                input,
+                context,
+              });
+              child.debug(`Route handler resolve started`);
+            }
             // Execute the handler
             const result = await this._handler!({
               input: validatedInput,
               context: combinedContext,
             });
+
+            // Log the raw handler result if debugging is enabled and this is a tool call
+            if (this._debugEnabled) {
+              const handlerResultChild = logger.child({
+                ...baseLogInfo,
+                event: "resolve_end",
+                input: validatedInput,
+                raw_result: JSON.stringify(result),
+              });
+              handlerResultChild.debug("Route handler resolve end");
+            }
 
             // Validate the output
             const validatedOutput = this._validateOutput(result);
@@ -262,49 +295,88 @@ export class RouteBuilder<
               this._llmFormatter &&
               typeof this._llmFormatter.success === "function"
             ) {
+              const llmFormatterChild = logger.child({
+                ...baseLogInfo,
+                event: "llm_formatter_start",
+                input: validatedInput,
+                raw_result: JSON.stringify(validatedOutput),
+                context: combinedContext,
+              });
+              llmFormatterChild.debug("LLM formatter started");
+
               const formatted = this._llmFormatter.success(
                 validatedOutput,
                 validatedInput,
                 combinedContext,
               );
 
-              // Debug logging
               if (this._debugEnabled) {
-                // Show final result and boundary at the very end
-                logger.info({
+                const formatterChild = logger.child({
                   ...baseLogInfo,
-                  event: "route_formatted_output",
-                  msg: `Route formatted output: ${this.name}`,
+                  event: "llm_formatter_end",
+                  input: validatedInput,
+                  raw_result: JSON.stringify(validatedOutput),
+                  llm_formatter: {
+                    success: {
+                      hasFormatter: true,
+                      output: formatted,
+                    },
+                  },
+                });
+                formatterChild.debug("LLM formatter end");
+
+                // Add tool call completion log
+                const completeChild = logger.child({
+                  ...baseLogInfo,
+                  event: "resolve_end",
                   input: validatedInput,
                   output: formatted,
-                  context: combinedContext,
-                  duration: Date.now() - startTime,
+                  duration: `${Date.now() - startTime}ms`,
                 });
-                // Only show boundary if not called from a tool call
-                if (!isFromToolCall) {
-                  logger.debug(logBoundary);
-                }
+                completeChild.debug("Resolve end");
+              }
+
+              // Only show boundary for non-tool calls at the very end
+              if (this._debugEnabled) {
+                logger.debug(logBoundary);
               }
 
               return formatted;
             }
 
             // Debug logging
-            if (this._debugEnabled) {
-              // Show final result and boundary at the very end
-              logger.info({
+            if (this._debugEnabled && !isFromToolCall) {
+              // Only log success if not called from a tool call
+              const child = logger.child({
                 ...baseLogInfo,
-                event: "route_success",
-                msg: `Route succeeded: ${this.name}`,
+                event: "route_internal_success",
                 input: validatedInput,
                 output: validatedOutput,
                 context: combinedContext,
                 duration: Date.now() - startTime,
               });
+              // Use debug level instead of info
+              child.debug(`Route succeeded`);
               // Only show boundary if not called from a tool call
-              if (!isFromToolCall) {
-                logger.debug(logBoundary);
-              }
+              logger.debug(logBoundary);
+            } else if (this._debugEnabled && isFromToolCall) {
+              // Add tool call completion log
+              const completeChild = logger.child({
+                ...baseLogInfo,
+                event: "tool_call_complete",
+                input: validatedInput,
+                output: validatedOutput,
+                duration: Date.now() - startTime,
+              });
+              completeChild.debug(`Tool call completed`);
+
+              // Add a separate format log that appears after tool call completion
+              const formatChild = logger.child({
+                ...baseLogInfo,
+                event: "route_formatted_output",
+                formatted_output: validatedOutput,
+              });
+              formatChild.debug(`Route formatted output`);
             }
 
             return validatedOutput;
@@ -321,44 +393,81 @@ export class RouteBuilder<
               );
 
               // Debug logging
-              if (this._debugEnabled) {
+              if (this._debugEnabled && !isFromToolCall) {
                 // Show error and boundary at the very end
-                logger.error({
+                const child = logger.child({
                   ...baseLogInfo,
-                  event: "route_formatted_error",
-                  msg: `Route formatted error: ${this.name} - ${(error as Error).message}`,
+                  event: "route_internal_formatted_error",
                   input: validatedInput,
                   error: (error as Error).message,
                   formattedOutput: formatted,
                   context: combinedContext,
                   duration: Date.now() - startTime,
                 });
-                // Only show boundary if not called from a tool call
-                if (!isFromToolCall) {
-                  logger.debug(logBoundary);
-                }
+                child.debug(`Route formatted error`);
+                logger.debug(logBoundary);
+              } else if (this._debugEnabled && isFromToolCall) {
+                // For tool calls, show error but let app-builder handle the boundary
+                const errorChild = logger.child({
+                  ...baseLogInfo,
+                  event: "route_formatted_error",
+                  input: validatedInput,
+                  error: (error as Error).message,
+                  formatted_output: formatted,
+                });
+                errorChild.debug(`Route formatted error`);
+
+                // Add tool call error completion log
+                const completeChild = logger.child({
+                  ...baseLogInfo,
+                  event: "tool_call_complete",
+                  input: validatedInput,
+                  output: formatted,
+                  error: true,
+                  error_message: (error as Error).message,
+                  duration: Date.now() - startTime,
+                });
+                completeChild.debug(`Tool call completed with error`);
               }
 
               return formatted;
             }
 
             // Debug logging
-            if (this._debugEnabled) {
+            if (this._debugEnabled && !isFromToolCall) {
               // Show error and boundary at the very end
-              logger.error({
+              const child = logger.child({
                 ...baseLogInfo,
-                event: "route_error",
-                msg: `Route error: ${this.name} - ${(error as Error).message}`,
+                event: "route_internal_error",
                 input: validatedInput,
                 error: (error as Error).message,
                 stack: (error as Error).stack,
                 context: combinedContext,
                 duration: Date.now() - startTime,
               });
-              // Only show boundary if not called from a tool call
-              if (!isFromToolCall) {
-                logger.debug(logBoundary);
-              }
+              child.debug(`Route error`);
+              logger.debug(logBoundary);
+            } else if (this._debugEnabled && isFromToolCall) {
+              // For tool calls, show error but let app-builder handle the boundary
+              const errorChild = logger.child({
+                ...baseLogInfo,
+                event: "route_error",
+                input: validatedInput,
+                error: (error as Error).message,
+                stack: (error as Error).stack,
+              });
+              errorChild.debug(`Route error`);
+
+              // Add tool call error completion log
+              const completeChild = logger.child({
+                ...baseLogInfo,
+                event: "tool_call_complete",
+                input: validatedInput,
+                error: true,
+                error_message: (error as Error).message,
+                duration: Date.now() - startTime,
+              });
+              completeChild.debug(`Tool call completed with error`);
             }
 
             throw error;
@@ -391,6 +500,29 @@ export class RouteBuilder<
   }): AppBuilder<any> {
     this._llmFormatter = options as unknown as LLMFormatterOptions<I, O, C>;
     return this.app;
+  }
+
+  /**
+   * Get formatter information
+   * @returns Object with formatter details or null if no formatter
+   * @internal
+   */
+  _getFormatterInfo(): {
+    hasSuccessFormatter: boolean;
+    hasErrorFormatter: boolean;
+    successFormatter?: (...args: any[]) => unknown;
+    errorFormatter?: (...args: any[]) => unknown;
+  } | null {
+    if (!this._llmFormatter) {
+      return null;
+    }
+
+    return {
+      hasSuccessFormatter: typeof this._llmFormatter.success === "function",
+      hasErrorFormatter: typeof this._llmFormatter.error === "function",
+      successFormatter: this._llmFormatter.success,
+      errorFormatter: this._llmFormatter.error,
+    };
   }
 
   /**
